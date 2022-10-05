@@ -1,4 +1,5 @@
 import os
+from tabnanny import check
 
 from flask import Flask, flash, render_template, redirect, request, session
 from flask_session import Session
@@ -58,13 +59,44 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in"""
-    return apology("TODO")
+    
+    # Make sure all sessions are clear when user click on the link
+    session.clear()
+
+    # Render the log in form for user to log in 
+    if request.method == "GET":
+        return render_template("login.html")
+
+    # Log user in if information matches
+    else:
+        # Make sure user submitted username, password
+        if not request.form.get("username"):
+            return apology("Thieu ten dang nhap!", 403)
+        elif not request.form.get("password"):
+            return apology("Thieu mat khau!", 403)
+
+        # When we are sure that users have submitted both username and password, time to query database
+        rows = User.query.filter_by(username=request.form.get("username")).all()
+
+        # Check if username is unique, and password is correct
+        if len(rows) != 1 or not check_password_hash(rows[0].hash, request.form.get("password")):
+            return apology("Ten dang nhap/Mat khau sai!", 403)
+        
+        # Else, we know that all conditions are satisfied, log user in
+        session["user_id"] = rows[0].user_id
+
+        # Redirect to homepage
+        return redirect("/")
 
 
 @app.route("/logout")
 def logout():
     """Log user out"""
-    return apology("TODO")
+    
+    # Log user out by forgetting any user_id
+    session.clear()
+
+    return redirect("/")
 
 
 @app.route("/register", methods=["GET", "POST"])
