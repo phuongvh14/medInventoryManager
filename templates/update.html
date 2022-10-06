@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Cập nhật
+{% endblock %}
+
+{% block main %}
+    <form action="/update" method="post">
+        <div class="mb-3 btn-group" role="group" aria-label="Basic radio toggle button group">
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="add_new" autocomplete="off" checked>
+            <label class="btn btn-outline-success" for="btnradio1">Thêm thuốc</label>
+          
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="correct_record" autocomplete="off">
+            <label class="btn btn-outline-danger" for="btnradio2">Sửa sai</label>  
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Tiếp tục</button>
+        </div>
+        
+    </form>
+{% endblock %}
