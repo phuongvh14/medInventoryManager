@@ -9,6 +9,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from helpers import apology,  login_required, vnd
 
+# Secret code to register
+SECRET_CODE = "capxach"
 
 # Configure application
 app = Flask(__name__)
@@ -102,7 +104,46 @@ def logout():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
-    return apology("TODO")
+
+    # Render register form if method is GET
+    if request.method == "GET":
+        return render_template("register.html")
+
+    # If method is POST, deal with information user's information
+    else:
+        username = request.form.get("username")
+        password = request.form.get("password")
+        pw_cf = request.form.get("confirmation")
+        code_entered = request.form.get("secret_code")
+
+        # Perform several checks of the information received from user:
+        if not username:
+            return apology("Thieu ten dang nhap", 400)
+        if not password or not pw_cf:
+            return apology("Thieu mat khau va xac nhan", 400)
+        if not code_entered:
+            return apology("Thieu code (Khong duoc cap quyen dang ki)", 400)
+        if password != pw_cf:
+            return apology("Mat khau va xac nhan khong khop", 400)
+
+        # Finally, when all fields are submitted and is valid, check for uniqueness of username
+        if len(User.query.filter_by(username=username).all()) == 0 and code_entered == SECRET_CODE:
+            # we then add the new user to our data base
+            new_user = User(
+                username=username,
+                hash=generate_password_hash(password, method='pbkdf2:sha256', salt_length=8),
+                user_type="authorized"
+            )
+            db.session.add(new_user)
+            db.session.commit()
+
+            # Finally, we are ready to log the user in 
+            session["user_id"] = User.query.filter_by(username=username).first().user_id
+            flash("Đăng kí thành công!")
+            return redirect("/")
+
+        else: 
+            return apology("Ten dang nhap da ton tai/ Khong duoc cap quyen dang ki", 400)
 
 
 @app.route("/buy", methods=["GET", "POST"])
