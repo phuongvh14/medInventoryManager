@@ -39,6 +39,15 @@ class User(db.Model):
     hash = db.Column(db.Text, nullable = False)
     user_type = db.Column(db.Text, nullable = False, default = "non-admin")
 
+
+class Medicine(db.Model):
+    med_id = db.Column(db.Integer, primary_key = True)
+    med_name = db.Column(db.Text, unique = True, nullable = False)
+    med_unit = db.Column(db.Text, nullable = False)
+    med_inventory = db.Column(db.Numeric, nullable = False)
+    med_latest_price = db.Column(db.Numeric, nullable = False)
+    med_notes = db.Column(db.Text) 
+
 db.create_all()
 
 # Making sure that responses aren't cached
@@ -171,7 +180,11 @@ def history():
 @login_required
 def update():
     """Allow user to add new medicine, or update an existing record"""
-    return apology("TODO")
+    if request.method == "GET":
+        return render_template("update.html")
+    else:
+        print(request.form.get("btnradio"))
+        return apology("TODO", 400)
 
 
 @app.route("/receive", methods=["GET", "POST"])
