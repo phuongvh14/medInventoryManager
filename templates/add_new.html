@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Thêm thuốc mới
+{% endblock %}
+
+{% block main %}
+
+    <form action="/addnew" method="post">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Tên thuốc" type="text">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Mật khẩu" type="password">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Xác nhận mật khẩu" type="password">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="secret_code" name="secret_code" placeholder="Code" type="password">
+        </div>
+        <button class="btn btn-primary" type="submit">Đăng kí</button>
+    </form>
+
+{% endblock %}
