@@ -1,4 +1,6 @@
+from dotenv import load_dotenv
 import os
+load_dotenv()
 from tabnanny import check
 
 from flask import Flask, flash, render_template, redirect, request, session
@@ -10,7 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from helpers import apology,  login_required, vnd
 
 # Secret code to register
-SECRET_CODE = "capxach"
+SECRET_CODE = os.getenv("SECRET_CODE")
 
 # Configure application
 app = Flask(__name__)
