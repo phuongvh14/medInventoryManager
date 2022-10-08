@@ -179,12 +179,24 @@ def history():
 @app.route("/update", methods=["GET", "POST"])
 @login_required
 def update():
-    """Allow user to add new medicine, or update an existing record"""
+    """Allow user to update existing records, like adding new medicine, or updating a transaction"""
     if request.method == "GET":
         return render_template("update.html")
     else:
-        print(request.form.get("btnradio"))
-        return apology("TODO", 400)
+        if request.form.get("btnradio") == "add_new":
+            return render_template("add_new.html")
+        else:
+
+        # TODO: Render correct_record.html if that was what the user chose
+
+            return apology("TODO", 400)
+
+
+@app.route("/addnew", methods=["GET", "POST"])
+@login_required
+def addnew():
+    """Allow user to add new medicine"""
+    return apology("TODO", 400)
 
 
 @app.route("/receive", methods=["GET", "POST"])
