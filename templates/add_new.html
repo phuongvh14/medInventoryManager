@@ -11,15 +11,28 @@
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Tên thuốc" type="text">
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Mật khẩu" type="password">
+            <input class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Tồn hiện tại" type="number" min="0">
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Xác nhận mật khẩu" type="password">
+            <select class="form-select form-select-sm mx-auto w-auto">
+                <option selected>Đơn vị</option>
+                <option value="lo">lọ</option>
+                <option value="hop">hộp</option>
+                <option value="vien">viên</option>
+                <option value="ong">ống</option>
+                <option value="goi">gói</option>
+                <option value="tuyp">tuýp</option>
+                <option value="cuon">cuộn</option>
+                <option value="chai">chai</option>
+            </select>
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="secret_code" name="secret_code" placeholder="Code" type="password">
+            <input class="form-control mx-auto w-auto" id="latest_price" name="latest_price" placeholder="Giá hiện tại" type="number" min="0">
         </div>
-        <button class="btn btn-primary" type="submit">Đăng kí</button>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="med_notes" name="med_notes" placeholder="Ghi chú" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Thêm thuốc mới</button>
     </form>
 
 {% endblock %}
