@@ -45,8 +45,8 @@ class User(db.Model):
 class Medicine(db.Model):
     med_id = db.Column(db.Integer, primary_key = True)
     med_name = db.Column(db.Text, unique = True, nullable = False)
+    med_quantity = db.Column(db.Numeric, nullable = False)
     med_unit = db.Column(db.Text, nullable = False)
-    med_inventory = db.Column(db.Numeric, nullable = False)
     med_latest_price = db.Column(db.Numeric, nullable = False)
     med_notes = db.Column(db.Text) 
 
@@ -198,7 +198,31 @@ def update():
 @login_required
 def addnew():
     """Allow user to add new medicine"""
-    return apology("TODO", 400)
+    # We first get the input from user
+    med_name = request.form.get("medname")
+    med_quantity = request.form.get("quantity")
+    med_unit = request.form.get("medunit")
+    med_price = request.form.get("latest_price")
+    med_notes = request.form.get("med_notes")
+
+    # If there is no meds in the existing database with the same name
+    if len(Medicine.query.filter_by(med_name=med_name).all()) == 0:
+        # We add this confirmed new medicine to the db:
+        new_med = Medicine(
+            med_name=med_name,
+            med_unit=med_unit,
+            med_quantity=med_quantity,
+            med_latest_price=med_price,
+            med_notes=med_notes
+        )
+        db.session.add(new_med)
+        db.session.commit()
+
+        # And then we redirect user to the homepage after flashing a message
+        flash("Thêm thuốc thành công")
+        return redirect("/")
+    else:
+        return apology("Thuoc da ton tai tren he thong!", 400)
 
 
 @app.route("/receive", methods=["GET", "POST"])

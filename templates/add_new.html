@@ -8,14 +8,14 @@
 
     <form action="/addnew" method="post">
         <div class="mb-3">
-            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Tên thuốc" type="text">
+            <input required autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Tên thuốc" type="text">
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Tồn hiện tại" type="number" min="0">
+            <input required class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Tồn hiện tại" type="number" min="0">
         </div>
         <div class="mb-3">
-            <select class="form-select form-select-sm mx-auto w-auto">
-                <option selected>Đơn vị</option>
+            <select required class="form-select form-select-sm mx-auto w-auto" id="medunit" name="medunit">
+                <option value="">Đơn vị</option>
                 <option value="lo">lọ</option>
                 <option value="hop">hộp</option>
                 <option value="vien">viên</option>
@@ -27,7 +27,7 @@
             </select>
         </div>
         <div class="mb-3">
-            <input class="form-control mx-auto w-auto" id="latest_price" name="latest_price" placeholder="Giá hiện tại" type="number" min="0">
+            <input required class="form-control mx-auto w-auto" id="latest_price" name="latest_price" placeholder="Giá hiện tại" type="number" min="0">
         </div>
         <div class="mb-3">
             <input class="form-control mx-auto w-auto" id="med_notes" name="med_notes" placeholder="Ghi chú" type="text">
