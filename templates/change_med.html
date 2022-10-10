@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Sửa thông tin thuốc
+{% endblock %}
+
+{% block main %}
+
+    <form action="/change_med" method="post">
+        <div class="mb-3">
+            <input required autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Thuốc muốn sửa" type="text">
+        </div>
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Tồn hiện tại" type="number" min="0">
+        </div>
+        <div class="mb-3">
+            <select required class="form-select form-select-sm mx-auto w-auto" id="medunit" name="medunit">
+                <option value="">Đơn vị</option>
+                <option value="lo">lọ</option>
+                <option value="hop">hộp</option>
+                <option value="vien">viên</option>
+                <option value="ong">ống</option>
+                <option value="goi">gói</option>
+                <option value="tuyp">tuýp</option>
+                <option value="cuon">cuộn</option>
+                <option value="chai">chai</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" id="latest_price" name="latest_price" placeholder="Giá hiện tại" type="number" min="0">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="med_notes" name="med_notes" placeholder="Ghi chú" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Thêm thuốc mới</button>
+    </form>
+
+{% endblock %}

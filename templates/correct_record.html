@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Sửa sai
+{% endblock %}
+
+{% block main %}
+    <div class="alert alert-danger mx-auto w-auto" role="alert">
+        Chú ý: Thông tin sửa và người sửa sẽ được lưu lại trong lịch sử!
+    </div>
+    <form action="/correct_record" method="post">
+        <div class="mb-3 btn-group" role="group" aria-label="Radio toggle button group">
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="med_info" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="btnradio1">Sửa thông tin thuốc</label>
+
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="transaction" autocomplete="off">
+            <label class="btn btn-outline-danger" for="btnradio2">Sửa giao dịch</label>
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Tiếp tục</button>
+        </div>
+    </form>
+{% endblock %}
