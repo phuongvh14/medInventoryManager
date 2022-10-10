@@ -188,13 +188,10 @@ def update():
         if request.form.get("btnradio") == "add_new":
             return render_template("add_new.html")
         else:
-
-        # TODO: Render correct_record.html if that was what the user chose
-
-            return apology("TODO", 400)
+            return render_template("correct_record.html")
 
 
-@app.route("/addnew", methods=["GET", "POST"])
+@app.route("/addnew", methods=["POST"])
 @login_required
 def addnew():
     """Allow user to add new medicine"""
@@ -223,6 +220,32 @@ def addnew():
         return redirect("/")
     else:
         return apology("Thuoc da ton tai tren he thong!", 400)
+
+
+@app.route("/correct_record", methods=["POST"])
+@login_required
+def correct_record():
+    """Allow user to change med info or transaction info"""
+    # When user wants to change existing med info:
+    # Will have to query Medicine database to get all meds name
+    if request.form.get("btnradio") == "med_info":
+        return render_template("change_med.html")
+    
+    # TODO: Else when user wants to change past transaction. Can be done only when transaction
+    # table is up!
+    else:
+        return apology("TODO", 400)
+
+
+@app.route("/change_med", methods=["POST"])
+@login_required
+def change_med():
+    """Allow user to change existing information about a medicine"""
+    # TODO: Design correct_record database, and then record editing there. 
+    # Probably will have to call Medicine database, add info about exisiting med will
+    # be added to correct_record database
+    # After that, existing information will be updated 
+    pass
 
 
 @app.route("/receive", methods=["GET", "POST"])
