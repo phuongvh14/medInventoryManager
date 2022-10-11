@@ -10,7 +10,6 @@
         <div class="mb-3">
             <input required class="form-control mx-auto w-auto" list="datalistMed" id="medname" name="medname" placeholder="Chọn thuốc muốn sửa">
             <datalist id="datalistMed">
-                <!--Jinja here-->
                 {% for med in existing_meds %}
                     <option>{{ med.med_name }}</option>
                 {% endfor %}
