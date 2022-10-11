@@ -8,6 +8,7 @@ from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
+from datetime import datetime
 
 from helpers import apology,  login_required, vnd
 
@@ -49,6 +50,17 @@ class Medicine(db.Model):
     med_unit = db.Column(db.Text, nullable = False)
     med_latest_price = db.Column(db.Numeric, nullable = False)
     med_notes = db.Column(db.Text) 
+
+class ChangedInfo(db.Model):
+    change_id = db.Column(db.Integer, primary_key = True)
+    changed_by = db.Column(db.Text, nullable = False)
+    changed_time = db.Column(db.DateTime, nullable = False)
+    client_IP = db.Column(db.Text, nullable = False)
+    change_type = db.Column(db.Text, nullable = False)
+    changed_from = db.Column(db.Text, nullable = False)
+    changed_to = db.Column(db.Text, nullable = False)
+    change_notes = db.Column(db.Text)
+
 
 with app.app_context():
     db.create_all()
@@ -249,8 +261,15 @@ def change_med():
     # Probably will have to call Medicine database, add info about exisiting med will
     # be added to correct_record database
     # After that, existing information will be updated 
-    pass
+    return apology("TODO", 400)
 
+
+@app.route("/changes", methods=["GET", "POST"])
+@login_required
+def changes():
+    """Allow user to see existing records of changes made in med info or transaction info"""
+    # TODO: Display a table that details all the changes made to med info or transaction info
+    return apology("TODO", 400)
 
 @app.route("/receive", methods=["GET", "POST"])
 def receive():
