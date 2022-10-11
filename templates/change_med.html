@@ -8,7 +8,13 @@
 
     <form action="/change_med" method="post">
         <div class="mb-3">
-            <input required autocomplete="off" autofocus class="form-control mx-auto w-auto" id="medname" name="medname" placeholder="Thuốc muốn sửa" type="text">
+            <input required class="form-control mx-auto w-auto" list="datalistMed" id="medname" name="medname" placeholder="Chọn thuốc muốn sửa">
+            <datalist id="datalistMed">
+                <!--Jinja here-->
+                {% for med in existing_meds %}
+                    <option>{{ med.med_name }}</option>
+                {% endfor %}
+            </datalist>
         </div>
         <div class="mb-3">
             <input required class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Tồn hiện tại" type="number" min="0">

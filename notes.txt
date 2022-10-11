@@ -1,0 +1,14 @@
+# Virtual environment set up
+py -3 -m venv .venv
+.venv/scripts/activate
+
+# Update python
+python -m pip install --upgrade pip
+python -m pip install flask
+python -m pip install flask_session
+python -m pip install flask_sqlalchemy
+python -m pip install python-dotenv
+
+
+
+
