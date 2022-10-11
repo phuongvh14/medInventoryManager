@@ -50,7 +50,8 @@ class Medicine(db.Model):
     med_latest_price = db.Column(db.Numeric, nullable = False)
     med_notes = db.Column(db.Text) 
 
-db.create_all()
+with app.app_context():
+    db.create_all()
 
 # Making sure that responses aren't cached
 @app.after_request
@@ -229,7 +230,10 @@ def correct_record():
     # When user wants to change existing med info:
     # Will have to query Medicine database to get all meds name
     if request.form.get("btnradio") == "med_info":
-        return render_template("change_med.html")
+        # Query for all records of medicine from database
+        existing_meds = Medicine.query.order_by(Medicine.med_name).all()
+        print(existing_meds)
+        return render_template("change_med.html", existing_meds=existing_meds)
     
     # TODO: Else when user wants to change past transaction. Can be done only when transaction
     # table is up!
