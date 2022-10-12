@@ -257,11 +257,48 @@ def correct_record():
 @login_required
 def change_med():
     """Allow user to change existing information about a medicine"""
-    # TODO: Design correct_record database, and then record editing there. 
-    # Probably will have to call Medicine database, add info about exisiting med will
-    # be added to correct_record database
-    # After that, existing information will be updated 
-    return apology("TODO", 400)
+    # Determine the medicine in need of change
+    med_name = request.form.get("medname")
+    # Query existing data about that medicine:
+    info = Medicine.query.filter_by(med_name=med_name).first()
+    changed_from = {
+        "med_name": med_name,
+        "old_quantity": info.med_quantity,
+        "old_unit": info.med_unit,
+        "old_price": info.med_latest_price,
+        "old_notes": info.med_notes,
+    }
+
+    # Getting data that user wants to change:
+    changed_to = {
+        "med_name": med_name,
+        "new_quantity": request.form.get("quantity"),
+        "new_unit": request.form.get("medunit"),
+        "new_price": request.form.get("latest_price"),
+    }
+
+    # Adding the data to the ChangedInfo database:
+    current_user = User.query.filter_by(user_id=session["user_id"]).first().username
+    current_time = datetime.now()
+    current_IP = request.environ['REMOTE_ADDR']
+    change_notes = request.form.get("med_notes")
+
+    new_change = ChangedInfo(
+        changed_by = current_user,
+        changed_time = current_time,
+        client_IP = current_IP,
+        change_type = "sua thong tin thuoc",
+        changed_from = changed_from,
+        changed_to = changed_to,
+        change_notes = change_notes
+    )
+    db.session.add(new_change)
+    db.session.commit()
+
+    # Rendering the confirmation page to ask user 1 last time about their choice
+    return render_template("medInfoChangeConfirm.html")
+    
+    
 
 
 @app.route("/changes", methods=["GET", "POST"])
