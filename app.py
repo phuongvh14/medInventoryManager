@@ -46,9 +46,9 @@ class User(db.Model):
 class Medicine(db.Model):
     med_id = db.Column(db.Integer, primary_key = True)
     med_name = db.Column(db.Text, unique = True, nullable = False)
-    med_quantity = db.Column(db.Numeric, nullable = False)
+    med_quantity = db.Column(db.Text, nullable = False)
     med_unit = db.Column(db.Text, nullable = False)
-    med_latest_price = db.Column(db.Numeric, nullable = False)
+    med_latest_price = db.Column(db.Text, nullable = False)
     med_notes = db.Column(db.Text) 
 
 class ChangedInfo(db.Model):
@@ -57,6 +57,7 @@ class ChangedInfo(db.Model):
     changed_time = db.Column(db.DateTime, nullable = False)
     client_IP = db.Column(db.Text, nullable = False)
     change_type = db.Column(db.Text, nullable = False)
+    medicine = db.Column(db.Text, nullable = False)
     changed_from = db.Column(db.Text, nullable = False)
     changed_to = db.Column(db.Text, nullable = False)
     change_notes = db.Column(db.Text)
@@ -210,9 +211,9 @@ def addnew():
     """Allow user to add new medicine"""
     # We first get the input from user
     med_name = request.form.get("medname")
-    med_quantity = request.form.get("quantity")
+    med_quantity = str(request.form.get("quantity"))
     med_unit = request.form.get("medunit")
-    med_price = request.form.get("latest_price")
+    med_price = str(request.form.get("latest_price"))
     med_notes = request.form.get("med_notes")
 
     # If there is no meds in the existing database with the same name
@@ -244,7 +245,6 @@ def correct_record():
     if request.form.get("btnradio") == "med_info":
         # Query for all records of medicine from database
         existing_meds = Medicine.query.order_by(Medicine.med_name).all()
-        print(existing_meds)
         return render_template("change_med.html", existing_meds=existing_meds)
     
     # TODO: Else when user wants to change past transaction. Can be done only when transaction
@@ -263,18 +263,18 @@ def change_med():
     info = Medicine.query.filter_by(med_name=med_name).first()
     changed_from = {
         "med_name": med_name,
-        "old_quantity": info.med_quantity,
+        "old_quantity": str(info.med_quantity),
         "old_unit": info.med_unit,
-        "old_price": info.med_latest_price,
+        "old_price": str(info.med_latest_price),
         "old_notes": info.med_notes,
     }
 
     # Getting data that user wants to change:
     changed_to = {
         "med_name": med_name,
-        "new_quantity": request.form.get("quantity"),
+        "new_quantity": str(request.form.get("quantity")),
         "new_unit": request.form.get("medunit"),
-        "new_price": request.form.get("latest_price"),
+        "new_price": str(request.form.get("latest_price")),
     }
 
     # Adding the data to the ChangedInfo database:
@@ -288,17 +288,53 @@ def change_med():
         changed_time = current_time,
         client_IP = current_IP,
         change_type = "sua thong tin thuoc",
-        changed_from = changed_from,
-        changed_to = changed_to,
+        medicine = med_name,
+        changed_from = str(changed_from),
+        changed_to = str(changed_to),
         change_notes = change_notes
     )
     db.session.add(new_change)
     db.session.commit()
 
     # Rendering the confirmation page to ask user 1 last time about their choice
-    return render_template("medInfoChangeConfirm.html")
+    return render_template("medInfoChangeConfirm.html", med_name=med_name, changed_from=changed_from, 
+                            changed_to=changed_to, current_user=current_user, client_IP=current_IP)
+
+
+@app.route("/change_med_confirm", methods=["POST"])
+@login_required
+def change_med_confirm():
+    # Get the name of the medicine that the user is modifying
+    med_name = request.form.get("medname")
+    # Query the latest change made to that particular medicine in the change info table
+    change_before_confirm = ChangedInfo.query.filter_by(medicine=med_name).order_by(ChangedInfo.changed_time.desc()).first()
+
+    #If user confirms the change they want to make
+    if request.form.get("btnradio") == "confirmed":
+        # The dictionary that stores values that user confirms they want to change
+        changed_to = eval(change_before_confirm.changed_to)
+        # Query the med in the Medicine table that we will update
+        changing_med = Medicine.query.filter_by(med_name=med_name).first()
+        # And update the entry with new information
+        changing_med.med_quantity = changed_to["new_quantity"]
+        changing_med.med_unit = changed_to["new_unit"]
+        changing_med.med_latest_price = changed_to["new_price"]
+        changing_med.med_notes = change_before_confirm.change_notes
+        db.session.commit()
+
+        # Once data entries have been updated, redirect to homepage
+        flash("Sửa thông tin thuốc thành công!")
+        return redirect("/")
     
-    
+    # If the user wants to cancel the previous change:
+    else: 
+        # We have to delete the change record from the database
+        db.session.delete(change_before_confirm)
+        db.session.commit()
+        
+        # Tell user cancellation was successful before redirecting
+        flash("Hủy thành công việc sửa thông tin thuốc!")
+        return redirect("/")
 
 
 @app.route("/changes", methods=["GET", "POST"])

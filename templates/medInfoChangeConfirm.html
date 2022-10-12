@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Xác nhận sửa
+{% endblock %}
+
+{% block main %}
+    <div class="alert alert-warning mb-3" role="alert">
+        Xác nhận thay đổi thông tin thuốc <e>{{ med_name }}</e> như sau:
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="text-center">Cũ</th>
+                <th class="text-center">Mới</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>SL: {{ changed_from["old_quantity"] }}</td>
+                <td>SL: {{ changed_to["new_quantity"] }}</td>
+            </tr>
+            <tr>
+                <td>Đơn vị: {{ changed_from["old_unit"] }}</td>
+                <td>Đơn vị: {{ changed_to["new_unit"] }}</td>
+            </tr>
+            <tr>
+                <td>Giá: {{ changed_from["old_price"] }}</td>
+                <td>Giá: {{ changed_to["new_price"] }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="alert alert-warning mb-3">
+        Được sửa bởi người dùng {{ current_user }}, tại địa chỉ IP {{ client_IP }}
+    </div>
+    <form action="/change_med_confirm" method="post">
+        <div class="mb-3 invisible">
+            <input type="text" id="medname" name="medname" value="{{ med_name }}">
+        </div>
+        <div class="mb-3 btn-group" role="group" aria-label="Radio toggle button group">
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="confirmed" autocomplete="off" checked>
+            <label class="btn btn-outline-success" for="btnradio1">Xác nhận</label>
+
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="cancel" autocomplete="off">
+            <label class="btn btn-outline-danger" for="btnradio2">Hủy giao dịch</label>
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Tiếp tục</button>
+        </div>
+    </form>
+{% endblock %}
