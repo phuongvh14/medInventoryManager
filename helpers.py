@@ -33,4 +33,4 @@ def vnd(value):
     :param value: The value of money we want to format
     :return: The value with commas separating thousands
     """
-    return f"{value:,}"
+    return f"{value:,}".replace(",", ".")

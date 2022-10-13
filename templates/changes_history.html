@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Lịch sử sửa
+{% endblock %}
+
+{% block main %}
+    <table class="table table-hover table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Người sửa</th>
+                <th>Ngày sửa</th>
+                <th>Loại sửa</th>
+                <th>Thuốc</th>
+                <th>Sửa từ</th>
+                <th>Sửa thành</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for change in all_changes %}
+                <tr>
+                    <td>{{ change.changed_by }}</td>
+                    <td>{{ change.changed_time.strftime("%d/%m/%Y, %H:%M:%S") }}</td>
+                    <td>{{ change.change_type }}</td>
+                    <td>{{ change.medicine }}</td>
+                    <td>
+                        SL: {{ (change.changed_from[1:-1].split(", ")[2]).split(": ")[1][1:-1] }}
+                        <br>
+                        Giá: {{ (change.changed_from[1:-1].split(", ")[5]).split(": ")[1][1:-1] }}
+                    </td>
+                    <td>
+                        SL: {{ (change.changed_to[1:-1].split(", ")[2]).split(": ")[1][1:-1] }}
+                        <br>
+                        Giá: {{ (change.changed_to[1:-1].split(", ")[5]).split(": ")[1][1:-1] }}
+                    </td>
+                    <td>{{ change.change_notes }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

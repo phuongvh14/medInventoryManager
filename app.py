@@ -263,9 +263,11 @@ def change_med():
     info = Medicine.query.filter_by(med_name=med_name).first()
     changed_from = {
         "med_name": med_name,
-        "old_quantity": str(info.med_quantity),
+        "old_quantity": info.med_quantity,
+        "old_quantity_formatted": vnd(int(info.med_quantity)),
         "old_unit": info.med_unit,
-        "old_price": str(info.med_latest_price),
+        "old_price": info.med_latest_price,
+        "old_price_formatted": vnd(int(info.med_latest_price)),
         "old_notes": info.med_notes,
     }
 
@@ -273,8 +275,10 @@ def change_med():
     changed_to = {
         "med_name": med_name,
         "new_quantity": str(request.form.get("quantity")),
+        "new_quantity_formatted": vnd(int(request.form.get("quantity"))),
         "new_unit": request.form.get("medunit"),
         "new_price": str(request.form.get("latest_price")),
+        "new_price_formatted": vnd(int(request.form.get("latest_price"))),
     }
 
     # Adding the data to the ChangedInfo database:
@@ -324,14 +328,14 @@ def change_med_confirm():
 
         # Once data entries have been updated, redirect to homepage
         flash("Sửa thông tin thuốc thành công!")
-        return redirect("/")
+        return redirect("/changes")
     
     # If the user wants to cancel the previous change:
     else: 
         # We have to delete the change record from the database
         db.session.delete(change_before_confirm)
         db.session.commit()
-        
+
         # Tell user cancellation was successful before redirecting
         flash("Hủy thành công việc sửa thông tin thuốc!")
         return redirect("/")
@@ -341,8 +345,9 @@ def change_med_confirm():
 @login_required
 def changes():
     """Allow user to see existing records of changes made in med info or transaction info"""
-    # TODO: Display a table that details all the changes made to med info or transaction info
-    return apology("TODO", 400)
+    # Query the ChangedInfo table to get all the changes made by user
+    all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).all()
+    return render_template("changes_history.html", all_changes=all_changes)
 
 @app.route("/receive", methods=["GET", "POST"])
 def receive():

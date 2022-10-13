@@ -17,16 +17,16 @@
         </thead>
         <tbody>
             <tr>
-                <td>SL: {{ changed_from["old_quantity"] }}</td>
-                <td>SL: {{ changed_to["new_quantity"] }}</td>
+                <td>SL: {{ changed_from["old_quantity_formatted"] }}</td>
+                <td>SL: {{ changed_to["new_quantity_formatted"] }}</td>
             </tr>
             <tr>
                 <td>Đơn vị: {{ changed_from["old_unit"] }}</td>
                 <td>Đơn vị: {{ changed_to["new_unit"] }}</td>
             </tr>
             <tr>
-                <td>Giá: {{ changed_from["old_price"] }}</td>
-                <td>Giá: {{ changed_to["new_price"] }}</td>
+                <td>Giá 1 đơn vị: {{ changed_from["old_price_formatted"] }}</td>
+                <td>Giá 1 đơn vị: {{ changed_to["new_price_formatted"] }}</td>
             </tr>
         </tbody>
     </table>
