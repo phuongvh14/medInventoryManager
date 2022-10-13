@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Danh sách thuốc
+{% endblock %}
+
+{% block main %}
+    <table class="table table-hover table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="text-start">Tên thuốc</th>
+                <th>Số lượng tồn</th>
+                <th>Đơn vị</th>
+                <th>Giá nhập</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in all_meds %}
+                <tr>
+                    <td class="text-start">{{ med.med_name }}</td>
+                    <td>{{ med.med_quantity_formatted }}</td>
+                    <td>{{ med.med_unit }}</td>
+                    <td>{{ med.med_price_formatted }}</td>
+                    <td>{{ med.med_notes }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        
+    </table>
+{% endblock %}

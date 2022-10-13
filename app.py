@@ -47,8 +47,10 @@ class Medicine(db.Model):
     med_id = db.Column(db.Integer, primary_key = True)
     med_name = db.Column(db.Text, unique = True, nullable = False)
     med_quantity = db.Column(db.Text, nullable = False)
+    med_quantity_formatted = db.Column(db.Text, nullable = False)
     med_unit = db.Column(db.Text, nullable = False)
     med_latest_price = db.Column(db.Text, nullable = False)
+    med_price_formatted = db.Column(db.Text, nullable = False)
     med_notes = db.Column(db.Text) 
 
 class ChangedInfo(db.Model):
@@ -80,7 +82,8 @@ def after_request(response):
 @login_required
 def index():
     '''Show portfolio of medicine: med_id, med_name, current_inventory, latest_price'''
-    return apology("TODO")
+    all_meds = Medicine.query.order_by(Medicine.med_name).all()
+    return render_template("index.html", all_meds=all_meds)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -212,8 +215,10 @@ def addnew():
     # We first get the input from user
     med_name = request.form.get("medname")
     med_quantity = str(request.form.get("quantity"))
+    quantity_formatted = vnd(int(request.form.get("quantity")))
     med_unit = request.form.get("medunit")
     med_price = str(request.form.get("latest_price"))
+    price_formatted = vnd(int(request.form.get("latest_price")))
     med_notes = request.form.get("med_notes")
 
     # If there is no meds in the existing database with the same name
@@ -223,7 +228,9 @@ def addnew():
             med_name=med_name,
             med_unit=med_unit,
             med_quantity=med_quantity,
+            med_quantity_formatted=quantity_formatted,
             med_latest_price=med_price,
+            med_price_formatted=price_formatted,
             med_notes=med_notes
         )
         db.session.add(new_med)
@@ -264,10 +271,10 @@ def change_med():
     changed_from = {
         "med_name": med_name,
         "old_quantity": info.med_quantity,
-        "old_quantity_formatted": vnd(int(info.med_quantity)),
+        "old_quantity_formatted": info.med_quantity_formatted,
         "old_unit": info.med_unit,
         "old_price": info.med_latest_price,
-        "old_price_formatted": vnd(int(info.med_latest_price)),
+        "old_price_formatted": info.med_price_formatted,
         "old_notes": info.med_notes,
     }
 
@@ -321,8 +328,10 @@ def change_med_confirm():
         changing_med = Medicine.query.filter_by(med_name=med_name).first()
         # And update the entry with new information
         changing_med.med_quantity = changed_to["new_quantity"]
+        changing_med.med_quantity_formatted = changed_to["new_quantity_formatted"]
         changing_med.med_unit = changed_to["new_unit"]
         changing_med.med_latest_price = changed_to["new_price"]
+        changing_med.med_price_formatted = changed_to["new_price_formatted"]
         changing_med.med_notes = change_before_confirm.change_notes
         db.session.commit()
 
