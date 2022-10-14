@@ -42,7 +42,6 @@ class User(db.Model):
     hash = db.Column(db.Text, nullable = False)
     user_type = db.Column(db.Text, nullable = False, default = "non-admin")
 
-
 class Medicine(db.Model):
     med_id = db.Column(db.Integer, primary_key = True)
     med_name = db.Column(db.Text, unique = True, nullable = False)
@@ -64,22 +63,23 @@ class ChangedInfo(db.Model):
     changed_to = db.Column(db.Text, nullable = False)
     change_notes = db.Column(db.Text)
 
-class PurchaseHistory(db.Model):
-    purchase_id = db.Column(db.Integer, primary_key = True)
-    purchased_by = db.Column(db.Text, nullable = False)
-    purchase_time = db.Column(db.DateTime, nullable = False)
-    purchase_IP = db.Column(db.Text, nullable = False)
+class BuySellHistory(db.Model):
+    action_id = db.Column(db.Integer, primary_key = True)
+    performed_by = db.Column(db.Text, nullable = False)
+    action_time = db.Column(db.DateTime, nullable = False)
+    action_IP = db.Column(db.Text, nullable = False)
     medicine = db.Column(db.Text, nullable = False)
     unit= db.Column(db.Text, nullable = False)
-    purchase_quantity = db.Column(db.Text, nullable = False)
-    purchase_quantity_formatted = db.Column(db.Text, nullable = False)
-    purchase_price = db.Column(db.Text, nullable = False)
-    purchase_price_formatted = db.Column(db.Text, nullable = False)
-    purchase_total = db.Column(db.Text, nullable = False)
-    purchase_total_formatted = db.Column(db.Text, nullable = False)
+    quantity = db.Column(db.Text, nullable = False)
+    quantity_formatted = db.Column(db.Text, nullable = False)
+    price = db.Column(db.Text, nullable = False)
+    price_formatted = db.Column(db.Text, nullable = False)
+    action_total = db.Column(db.Text, nullable = False)
+    action_total_formatted = db.Column(db.Text, nullable = False)
+    sale_place = db.Column(db.Text, nullable = False)
     previous_price = db.Column(db.Text, nullable = False)
     previous_quantity = db.Column(db.Text, nullable = False)
-    purchase_notes = db.Column(db.Text, nullable = False)
+    purchase_notes = db.Column(db.Text)
 
 with app.app_context():
     db.create_all()
@@ -215,7 +215,7 @@ def buy():
         med_notes = request.form.get("med_notes")
 
         if med_recorded_unit != user_chosen_unit:
-            flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn nhập: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc nhập lại!")
+            flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn nhập: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
             return apology("Sai don vi thuoc!", 400)
         else:
             # If the unit is correct, we will go ahead and query the medicine from database:
@@ -234,18 +234,19 @@ def buy():
             current_time = datetime.now()
             current_IP = request.environ['REMOTE_ADDR']
             
-            new_purchase = PurchaseHistory(
-                purchased_by=current_user,
-                purchase_time=current_time,
-                purchase_IP=current_IP,
+            new_purchase = BuySellHistory(
+                performed_by=current_user,
+                action_time=current_time,
+                action_IP=current_IP,
                 medicine=med_name,
-                purchase_quantity=str(med_quantity),
-                purchase_quantity_formatted=vnd(med_quantity),
+                quantity=str(med_quantity),
+                quantity_formatted=f"+{vnd(med_quantity)}",
                 unit=med_recorded_unit,
-                purchase_price=str(med_price),
-                purchase_price_formatted=vnd(med_price),
-                purchase_total=str(purchase_total),
-                purchase_total_formatted=vnd(purchase_total),
+                price=str(med_price),
+                price_formatted=vnd(med_price),
+                action_total=str(purchase_total),
+                action_total_formatted=vnd(purchase_total),
+                sale_place="--",
                 previous_price=med_recorded_price,
                 previous_quantity=med_recorded_quant,
                 purchase_notes=med_notes,
@@ -261,15 +262,74 @@ def buy():
 @login_required
 def sell():
     """Let user sell medicine to different places"""
-    return apology("TODO")
+    if request.method == "GET":
+        all_meds = Medicine.query.order_by(Medicine.med_name).all()
+        return render_template("sell.html", all_meds=all_meds)
+    else:
+        # Getting existing information from the database
+        med_info = request.form.get("medname").split(" - ")
+        med_name = med_info[0]
+        med_recorded_quant = med_info[1].split(": ")[1]
+        med_recorded_unit = med_info[2].split(": ")[1]
+        med_recorded_price = med_info[3].split(": ")[1]
 
+        # Getting user input
+        user_chosen_unit = request.form.get("medunit")
+        sale_place = request.form.get("place")
+        sale_quantity = int(request.form.get("quantity"))
+        sale_price = int(request.form.get("medprice"))
+        sale_total = sale_quantity * sale_price
+        sale_notes = request.form.get("med_notes")
+
+        if med_recorded_unit != user_chosen_unit:
+            flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn muốn xuất: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
+            return apology("Sai don vi thuoc!", 400)
+        else:
+            # If the unit is correct, we will go ahead and query the medicine from database:
+            changing_med = Medicine.query.filter_by(med_name=med_name).first()
+            # Check if there is enough left to sell:
+            if int(changing_med.med_quantity) < sale_quantity:
+                flash("Số lượng thuốc tồn không đủ để xuất!")
+                return apology("Khong du thuoc de xuat!", 400)
+            else:
+                new_quantity = int(changing_med.med_quantity) - sale_quantity
+                changing_med.med_quantity = str(new_quantity)
+                changing_med.med_quantity_formatted = vnd(new_quantity)
+                changing_med.med_notes = sale_notes
+                db.session.commit()
+
+                current_user = User.query.filter_by(user_id=session["user_id"]).first().username
+                current_time = datetime.now()
+                current_IP = request.environ['REMOTE_ADDR']
+
+                new_sale = BuySellHistory(
+                    performed_by=current_user,
+                    action_time=current_time,
+                    action_IP=current_IP,
+                    medicine=med_name,
+                    quantity=str(sale_quantity),
+                    quantity_formatted=f"-{vnd(sale_quantity)}",
+                    unit=med_recorded_unit,
+                    price=str(sale_price),
+                    price_formatted=vnd(sale_price),
+                    action_total=str(sale_total),
+                    action_total_formatted=vnd(sale_total),
+                    sale_place=sale_place,
+                    previous_price=med_recorded_price,
+                    previous_quantity=med_recorded_quant,
+                    purchase_notes=sale_notes,
+                )
+                db.session.add(new_sale)
+                db.session.commit()
+
+                flash("Xuất thuốc thành công!")
+                return redirect("/")
 
 @app.route("/history", methods=["GET", "POST"])
 @login_required
 def history():
     """Let user see all transactions and filter data"""
     # Nếu GET, render template cho ng dùng chọn xem lịch sử nhập hoặc lịch sử xuất
-
     # Nếu Post, xem ng dùng chọn gì và hiện lên bảng tương ứng
     return apology("TODO")
 
