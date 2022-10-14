@@ -25,11 +25,15 @@
                     <td>{{ change.change_type }}</td>
                     <td>{{ change.medicine }}</td>
                     <td>
+                        Đơn vị: {{ (change.changed_from[1:-1].split(", ")[3]).split(": ")[1][1:-1] }}
+                        <br>
                         SL: {{ (change.changed_from[1:-1].split(", ")[2]).split(": ")[1][1:-1] }}
                         <br>
                         Giá: {{ (change.changed_from[1:-1].split(", ")[5]).split(": ")[1][1:-1] }}
                     </td>
                     <td>
+                        Đơn vị: {{ (change.changed_to[1:-1].split(", ")[3]).split(": ")[1][1:-1] }}
+                        <br>
                         SL: {{ (change.changed_to[1:-1].split(", ")[2]).split(": ")[1][1:-1] }}
                         <br>
                         Giá: {{ (change.changed_to[1:-1].split(", ")[5]).split(": ")[1][1:-1] }}
