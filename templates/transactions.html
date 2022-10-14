@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Lịch sử xuất/nhập
+{% endblock %}
+
+{% block main %}
+    <table class="table table-hover table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="text-start">ID giao dịch</th>
+                <th>Người thực hiện</th>
+                <th>Ngày thực hiện</th>
+                <th>Tên thuốc</th>
+                <th>Đơn vị</th>
+                <th>SL nhập(+)/xuất(-)</th>
+                <th>Giá xuất</th>
+                <th>Tổng</th>
+                <th>Nơi xuất</th>
+                <th>Giá cũ</th>
+                <th>Tồn cũ</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in all_transactions %}
+                <tr>
+                    <td class="text-start">{{ transaction.action_id }}</td>
+                    <td>{{ transaction.performed_by }}</td>
+                    <td>{{ transaction.action_time }}</td>
+                    <td>{{ transaction.medicine }}</td>
+                    <td>{{ transaction.unit }}</td>
+                    <td>{{ transaction.quantity_formatted }}</td>
+                    <td>{{ transaction.price_formatted }}</td>
+                    <td>{{ transaction.action_total_formatted }}</td>
+                    <td>{{ transaction.sale_place }}</td>
+                    <td>{{ transaction.previous_price }}</td>
+                    <td>{{ transaction.previous_quantity }}</td>
+                    <td>{{ transaction.action_notes }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        
+    </table>
+{% endblock %}

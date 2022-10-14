@@ -79,7 +79,7 @@ class BuySellHistory(db.Model):
     sale_place = db.Column(db.Text, nullable = False)
     previous_price = db.Column(db.Text, nullable = False)
     previous_quantity = db.Column(db.Text, nullable = False)
-    purchase_notes = db.Column(db.Text)
+    action_notes = db.Column(db.Text)
 
 with app.app_context():
     db.create_all()
@@ -249,7 +249,7 @@ def buy():
                 sale_place="--",
                 previous_price=med_recorded_price,
                 previous_quantity=med_recorded_quant,
-                purchase_notes=med_notes,
+                action_notes=med_notes,
             )
             db.session.add(new_purchase)
             db.session.commit()
@@ -317,7 +317,7 @@ def sell():
                     sale_place=sale_place,
                     previous_price=med_recorded_price,
                     previous_quantity=med_recorded_quant,
-                    purchase_notes=sale_notes,
+                    action_notes=sale_notes,
                 )
                 db.session.add(new_sale)
                 db.session.commit()
@@ -329,10 +329,8 @@ def sell():
 @login_required
 def history():
     """Let user see all transactions and filter data"""
-    # Nếu GET, render template cho ng dùng chọn xem lịch sử nhập hoặc lịch sử xuất
-    # Nếu Post, xem ng dùng chọn gì và hiện lên bảng tương ứng
-    return apology("TODO")
-
+    all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).all()
+    return render_template("transactions.html", all_transactions=all_transactions)
 
 @app.route("/update", methods=["GET", "POST"])
 @login_required

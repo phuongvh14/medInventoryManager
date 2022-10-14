@@ -10,5 +10,13 @@ python -m pip install flask_sqlalchemy
 python -m pip install python-dotenv
 
 
+ - Về Route:
+ Cần làm các route: BUY, SELL, HISTORY, RECEIVE
+
+ - Về Template:
+ Cho thêm FILTER FUNCTIONALITY vào INDEX.HTML, CHANGES_HISTORY.HTML, TRANSACTION_HISTORY.HTML
+
+
+
 
 
