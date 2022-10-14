@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Nhập hàng
+{% endblock %}
+
+{% block main %}
+    <div class="alert alert-warning" role="alert">
+        Chú ý: Cần nhập thuốc đúng theo đơn vị đã tồn tại trên hệ thống. Nếu không, cần sửa thông tin thuốc trước khi nhập!
+    </div>
+    <form action="/buy" method="post">
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" list="datalistMed" id="medname" name="medname" placeholder="Chọn thuốc muốn nhập">
+            <datalist id="datalistMed">
+                {% for med in all_meds %}
+                    <option>{{ med.med_name }} - Tồn: {{ med.med_quantity_formatted }} - Đơn vị: {{ med.med_unit }} - Giá xuất: {{ med.med_price_formatted }}</option>
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" id="quantity" name="quantity" placeholder="Số lượng muốn nhập" type="number" min="0"> 
+        </div>
+        <div class="mb-3">
+            <select required class="form-select form-select-sm mx-auto w-auto" id="medunit" name="medunit">
+                <option value="">Đơn vị</option>
+                <option value="lo">lọ</option>
+                <option value="hop">hộp</option>
+                <option value="vien">viên</option>
+                <option value="ong">ống</option>
+                <option value="goi">gói</option>
+                <option value="tuyp">tuýp</option>
+                <option value="cuon">cuộn</option>
+                <option value="chai">chai</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" id="medprice" name="medprice" placeholder="Giá xuất" type="number" min="0">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="med_notes" name="med_notes" placeholder="Ghi chú" type="text">
+        </div>
+        <button class="btn btn-primary" type="submit">Nhập thuốc</button>
+
+    </form>
+{% endblock %}
