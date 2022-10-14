@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Xác nhận xóa giao dịch
+{% endblock %}
+
+{% block main %}
+    <div class="alert alert-warning" role="alert">
+        Bạn có chắc muốn xóa giao dịch dưới đây?
+    </div>
+    <table class="table table-hover table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="text-start">ID giao dịch</th>
+                <th>Người thực hiện</th>
+                <th>Ngày thực hiện</th>
+                <th>Tên thuốc</th>
+                <th>Đơn vị</th>
+                <th>SL nhập(+)/xuất(-)</th>
+                <th>Giá xuất</th>
+                <th>Tổng</th>
+                <th>Nơi xuất</th>
+                <th>Giá cũ</th>
+                <th>Tồn cũ</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-start">{{ trans_info.action_id }}</td>
+                <td>{{ trans_info.performed_by }}</td>
+                <td>{{ trans_info.action_time.strftime("%d/%m/%Y, %H:%M:%S") }}</td>
+                <td>{{ trans_info.medicine }}</td>
+                <td>{{ trans_info.unit }}</td>
+                <td>{{ trans_info.quantity_formatted }}</td>
+                <td>{{ trans_info.price_formatted }}</td>
+                <td>{{ trans_info.action_total_formatted }}</td>
+                <td>{{ trans_info.sale_place }}</td>
+                <td>{{ trans_info.previous_price }}</td>
+                <td>{{ trans_info.previous_quantity }}</td>
+                <td>{{ trans_info.action_notes }}</td>
+            </tr>
+        </tbody>
+        
+    </table>
+    <form action="/delete_final" method="post">
+        <div class="invisible">
+            <input type="number" id="trans_id" name="trans_id" value="{{ trans_info.action_id }}">
+        </div>
+        <div class="mb-3 btn-group" role="group" aria-label="Radio toggle button group">
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="confirmed" autocomplete="off" checked>
+            <label class="btn btn-outline-success" for="btnradio1">Xác nhận</label>
+
+            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="cancel" autocomplete="off">
+            <label class="btn btn-outline-danger" for="btnradio2">Hủy</label>
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Tiếp tục</button>
+        </div>
+    </form>
+{% endblock %}

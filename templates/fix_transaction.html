@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Sửa giao dịch
+{% endblock %}
+
+{% block main %}
+    <div class="alert alert-warning" role="alert">
+        Để sửa thông tin giao dịch, bạn cần ID giao dịch để xóa giao dịch cũ. Sau đó, bạn vào lại phần nhập và xuất để nhập lại!
+        <br>
+        Lưu ý: việc xóa giao dịch sẽ được lưu lại!
+    </div>
+    <form action="/delete_initial" method="post">
+        <div class="mb-3">
+            <input required class="form-control mx-auto w-auto" id="trans_id" name="trans_id" placeholder="ID giao dịch" type="number" min="0">
+        </div>
+        <button class="btn btn-primary" type="submit">Tiếp tục</button>
+
+    </form>
+{% endblock %}

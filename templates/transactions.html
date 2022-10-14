@@ -27,7 +27,7 @@
                 <tr>
                     <td class="text-start">{{ transaction.action_id }}</td>
                     <td>{{ transaction.performed_by }}</td>
-                    <td>{{ transaction.action_time }}</td>
+                    <td>{{ transaction.action_time.strftime("%d/%m/%Y, %H:%M:%S") }}</td>
                     <td>{{ transaction.medicine }}</td>
                     <td>{{ transaction.unit }}</td>
                     <td>{{ transaction.quantity_formatted }}</td>

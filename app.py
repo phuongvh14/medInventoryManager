@@ -1,3 +1,4 @@
+from statistics import median
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -391,10 +392,9 @@ def correct_record():
         existing_meds = Medicine.query.order_by(Medicine.med_name).all()
         return render_template("change_med.html", existing_meds=existing_meds)
     
-    # TODO: Else when user wants to change past transaction. Can be done only when transaction
-    # table is up!
+    # Else if the user wants to change transaction records
     else:
-        return apology("TODO", 400)
+        return render_template("fix_transaction.html")
 
 
 @app.route("/change_med", methods=["POST"])
@@ -485,6 +485,87 @@ def change_med_confirm():
         # Tell user cancellation was successful before redirecting
         flash("Hủy thành công việc sửa thông tin thuốc!")
         return redirect("/")
+
+
+@app.route("/delete_initial", methods=["POST"])
+@login_required
+def delete_initial():
+    # First we will get the transaction ID that user wants to delete
+    trans_id = int(request.form.get("trans_id"))
+    trans_info = BuySellHistory.query.filter_by(action_id=trans_id).first()
+    return render_template("delete_confirm.html", trans_info=trans_info)
+
+
+@app.route("/delete_final", methods=["POST"])
+@login_required
+def delete_final():
+    # Get the ID of the transaction that user wants to delete
+    trans_id = request.form.get("trans_id")
+
+    # If user confirms that they want to delete the transaction
+    if request.form.get("btnradio") == "confirmed":
+        # Log the deletion in the changes database
+        changing_trans = BuySellHistory.query.filter_by(action_id=trans_id).first()
+
+        current_user = User.query.filter_by(user_id=session["user_id"]).first().username
+        current_time = datetime.now()
+        current_IP = request.environ['REMOTE_ADDR']
+        changed_from = {
+            "med_name": changing_trans.medicine,
+            "old_quantity": changing_trans.quantity,
+            "old_quantity_formatted": changing_trans.quantity_formatted,
+            "old_unit": changing_trans.unit,
+            "old_price": changing_trans.price,
+            "old_price_formatted": changing_trans.price_formatted,
+            "old_notes": changing_trans.action_time,
+        }
+        changed_to = {
+            "med_name": changing_trans.medicine,
+            "new_quantity": "xoa",
+            "new_quantity_formatted": "xoa",
+            "new_unit": changing_trans.unit,
+            "new_price": "xoa",
+            "new_price_formatted": "xoa",
+        }
+        
+        new_delete = ChangedInfo(
+            changed_by = current_user,
+            changed_time = current_time,
+            client_IP = current_IP,
+            change_type = "sua giao dich",
+            medicine = changing_trans.medicine,
+            changed_from = str(changed_from),
+            changed_to = str(changed_to),
+            change_notes = f"Nơi xuất: {changing_trans.sale_place}"
+        )
+        db.session.add(new_delete)
+        db.session.commit()
+
+        # Change the inventory from the Medicine table bc of the deletion:
+        changing_med = Medicine.query.filter_by(med_name=changing_trans.medicine).first()
+        # If it was buying transaction that user wants to delete
+        if changing_trans.sale_place == "--":
+            new_quantity = int(changing_med.med_quantity) - int(changing_trans.quantity)
+        # Else if it was selling transaction:
+        else:
+            new_quantity = int(changing_med.med_quantity) + int(changing_trans.quantity)
+        
+        changing_med.med_quantity = str(new_quantity)
+        changing_med.med_quantity_formatted = vnd(new_quantity)
+        changing_med.med_notes = "Thay doi do nguoi dung xoa giao dich"
+        db.session.commit()
+
+        # Delete the record from the transaction database
+        db.session.delete(changing_trans)
+        db.session.commit()
+
+        flash("Xóa giao dịch thành công")
+        return redirect("/changes")
+    # If the user doesn't want to delete anymore
+    else:
+        flash("Hủy thành công việc xóa giao dịch!")
+        return redirect("/")
+
 
 
 @app.route("/changes", methods=["GET", "POST"])
