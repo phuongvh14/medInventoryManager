@@ -11,7 +11,7 @@
             <input required class="form-control mx-auto w-auto" list="datalistMed" id="medname" name="medname" placeholder="Chọn thuốc muốn sửa">
             <datalist id="datalistMed">
                 {% for med in existing_meds %}
-                    <option>{{ med.med_name }}</option>
+                    <option>{{ med.med_name }} - Tồn: {{ med.med_quantity_formatted }} - Đơn vị: {{ med.med_unit }} - Giá xuất: {{ med.med_price_formatted }}</option>
                 {% endfor %}
             </datalist>
         </div>
