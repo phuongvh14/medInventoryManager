@@ -16,6 +16,8 @@ python -m pip install python-dotenv
  - Về Template:
  Cho thêm FILTER FUNCTIONALITY vào INDEX.HTML, CHANGES_HISTORY.HTML, TRANSACTION_HISTORY.HTML
 
+ -Nhớ sửa SECRET_CODE_1
+
 
 
 

@@ -8,7 +8,7 @@ from tabnanny import check
 from flask import Flask, flash, render_template, redirect, request, session
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+from sqlalchemy import func, Integer
 from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
@@ -380,7 +380,6 @@ def history():
         
         money_total += int(transaction.action_total)
 
-    print(vnd(quantity_total), vnd(money_total))
     return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total))
 
 
@@ -678,9 +677,13 @@ def changes():
 
     return render_template("changes_history.html", all_changes=all_changes)
 
-@app.route("/receive", methods=["GET", "POST"])
-def receive():
+@app.route("/report", methods=["GET", "POST"])
+def report():
     """Allow non-admin user to confirm the arrival of medicine to their clinic"""
+    med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter_by(sale_place="Phung").group_by(BuySellHistory.medicine)
+
+    for item in med_report:
+        print(item)
     return apology("TODO")
 
 # Run the app
