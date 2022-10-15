@@ -5,6 +5,41 @@
 {% endblock %}
 
 {% block main %}
+    <form action="/changes" method="post">
+        <div class="row mb-3">
+            <div class="col">
+                Lọc theo: 
+            </div>
+            <div class="col">
+                <input type="text" class="form-control mx-auto w-auto" name="filter_user" placeholder="Người dùng">
+            </div>
+            <div class="col">
+                <input type="number" min="1" max="31" class="form-control" name="filter_day" placeholder="Ngày (DD)">
+            </div>
+            <div class="col">
+                <input type="number" min="1" max="12" class="form-control" name="filter_month" placeholder="Tháng (MM)">
+            </div>
+            <div class="col">
+                <input type="number" class="form-control" name="filter_year" placeholder="Năm (YYYY)" value="2022">
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="filter_med" placeholder="Thuốc">
+            </div>
+            <div class="col">
+                <select class="form-select" name="filter_type" placeholder="Loại sửa">
+                    <option value="">Loại sửa</option>
+                    <option value="sua giao dich">Sửa giao dịch</option>
+                    <option value="sua thong tin thuoc">Sửa thông tin thuốc</option>
+                </select>
+            </div>
+            <div class="col">
+                <button class="btn btn-primary" type="submit">Tìm giao dịch</button>
+            </div>
+            <div class="col">
+                <button class="btn btn-danger" type="submit">Làm mới trang</button>
+            </div>
+        </div mb-3>
+    </form>
     <table class="table table-hover table-striped table-bordered">
         <thead>
             <tr>

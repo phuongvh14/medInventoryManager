@@ -1,3 +1,4 @@
+from cgi import test
 from statistics import median
 from dotenv import load_dotenv
 import os
@@ -7,14 +8,16 @@ from tabnanny import check
 from flask import Flask, flash, render_template, redirect, request, session
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from helpers import apology,  login_required, vnd
 
 # Secret code to register
-SECRET_CODE = os.getenv("SECRET_CODE")
+SECRET_CODE_1 = os.getenv("SECRET_CODE_1")
+SECRET_CODE_2 = os.getenv("SECRET_CODE_2")
 
 # Configure application
 app = Flask(__name__)
@@ -78,6 +81,7 @@ class BuySellHistory(db.Model):
     action_total = db.Column(db.Text, nullable = False)
     action_total_formatted = db.Column(db.Text, nullable = False)
     sale_place = db.Column(db.Text, nullable = False)
+    action = db.Column(db.Text, nullable = False)
     previous_price = db.Column(db.Text, nullable = False)
     previous_quantity = db.Column(db.Text, nullable = False)
     action_notes = db.Column(db.Text)
@@ -172,7 +176,7 @@ def register():
             return apology("Mat khau va xac nhan khong khop", 400)
 
         # Finally, when all fields are submitted and is valid, check for uniqueness of username
-        if len(User.query.filter_by(username=username).all()) == 0 and code_entered == SECRET_CODE:
+        if len(User.query.filter_by(username=username).all()) == 0 and code_entered == SECRET_CODE_1:
             # we then add the new user to our data base
             new_user = User(
                 username=username,
@@ -248,6 +252,7 @@ def buy():
                 action_total=str(purchase_total),
                 action_total_formatted=vnd(purchase_total),
                 sale_place="--",
+                action="nhap",
                 previous_price=med_recorded_price,
                 previous_quantity=med_recorded_quant,
                 action_notes=med_notes,
@@ -316,6 +321,7 @@ def sell():
                     action_total=str(sale_total),
                     action_total_formatted=vnd(sale_total),
                     sale_place=sale_place,
+                    action="xuat",
                     previous_price=med_recorded_price,
                     previous_quantity=med_recorded_quant,
                     action_notes=sale_notes,
@@ -330,8 +336,53 @@ def sell():
 @login_required
 def history():
     """Let user see all transactions and filter data"""
-    all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).all()
-    return render_template("transactions.html", all_transactions=all_transactions)
+
+    # If the user just got to the page through the links, without any filter:
+    if request.method == "GET":
+        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).all()
+    # Else if the user has submitted a filter
+    else:
+        # Getting the input from the user: 
+        filter_user = request.form.get("filter_user")
+        filter_day = request.form.get("filter_day")
+        filter_month = request.form.get("filter_month")
+        filter_year = request.form.get("filter_year")
+        filter_med = request.form.get("filter_med").lower()
+        filter_place = request.form.get("filter_place").lower()
+        filter_action = request.form.get("filter_action")
+
+        # Creating an empty list for the queries we will perform
+        queries = []
+
+        if filter_user: queries.append(BuySellHistory.performed_by == filter_user)
+        if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
+        if filter_month: queries.append(func.strftime("%m", BuySellHistory.action_time) == filter_month)
+        if filter_year: queries.append(func.strftime("%Y", BuySellHistory.action_time) == filter_year)
+        if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
+        if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
+        if filter_action: queries.append(BuySellHistory.action == filter_action)
+
+        # Now that we have all the filters user wants:
+        flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}, nhập/xuất:{filter_action}")
+        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
+
+    quantity_total = 0
+    money_total = 0
+
+    for transaction in all_transactions:
+        # If the action was buying, we don't care about the money
+        if transaction.sale_place == "--":
+            quantity_total += int(transaction.quantity)
+
+        # If the action was selling, we care about the money
+        else:
+            quantity_total -= int(transaction.quantity)
+        
+        money_total += int(transaction.action_total)
+
+    print(vnd(quantity_total), vnd(money_total))
+    return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total))
+
 
 @app.route("/update", methods=["GET", "POST"])
 @login_required
@@ -358,7 +409,9 @@ def addnew():
     med_price = str(request.form.get("latest_price"))
     price_formatted = vnd(int(request.form.get("latest_price")))
     med_notes = request.form.get("med_notes")
-
+    total = int(med_quantity) * int(med_price)
+    total_formatted = vnd(total)
+    
     # If there is no meds in the existing database with the same name
     if len(Medicine.query.filter_by(med_name=med_name).all()) == 0:
         # We add this confirmed new medicine to the db:
@@ -372,6 +425,31 @@ def addnew():
             med_notes=med_notes
         )
         db.session.add(new_med)
+        db.session.commit()
+
+        current_user = User.query.filter_by(user_id=session["user_id"]).first().username
+        current_time = datetime.now()
+        current_IP = request.environ['REMOTE_ADDR']
+
+        new_add = BuySellHistory(
+            performed_by=current_user,
+            action_time=current_time,
+            action_IP=current_IP,
+            medicine=med_name,
+            quantity=med_quantity,
+            quantity_formatted=f"+{quantity_formatted}",
+            unit=med_unit,
+            price=med_price,
+            price_formatted=price_formatted,
+            action_total=total,
+            action_total_formatted=total_formatted,
+            sale_place="--",
+            action="them",
+            previous_price="chua co",
+            previous_quantity="chua co",
+            action_notes="Them thuoc chua ton tai tren he thong",
+        )
+        db.session.add(new_add)
         db.session.commit()
 
         # And then we redirect user to the homepage after flashing a message
@@ -402,7 +480,7 @@ def correct_record():
 def change_med():
     """Allow user to change existing information about a medicine"""
     # Determine the medicine in need of change
-    med_name = request.form.get("medname")
+    med_name = (request.form.get("medname").split(" - "))[0]
     # Query existing data about that medicine:
     info = Medicine.query.filter_by(med_name=med_name).first()
     changed_from = {
@@ -573,14 +651,37 @@ def delete_final():
 def changes():
     """Allow user to see existing records of changes made in med info or transaction info"""
     # Query the ChangedInfo table to get all the changes made by user
-    all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).all()
+    if request.method == "GET":
+        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).all()
+    else:
+        # Getting input from the user
+        filter_user = request.form.get("filter_user")
+        filter_day = request.form.get("filter_day")
+        filter_month = request.form.get("filter_month")
+        filter_year = request.form.get("filter_year")
+        filter_med = request.form.get("filter_med")
+        filter_type = request.form.get("filter_type")
+
+        # Creating an empty list for the queries we will perform
+        queries = []
+
+        if filter_user: queries.append(ChangedInfo.changed_by == filter_user)
+        if filter_day: queries.append(func.strftime("%d", ChangedInfo.changed_time) == filter_day)
+        if filter_month: queries.append(func.strftime("%m", ChangedInfo.changed_time) == filter_month)
+        if filter_year: queries.append(func.strftime("%Y", ChangedInfo.changed_time) == filter_year)
+        if filter_med: queries.append(func.lower(ChangedInfo.medicine) == filter_med)
+        if filter_type: queries.append(ChangedInfo.change_type == filter_type)
+    
+        flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, loại giao dịch:{filter_type}")
+        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
+
+
     return render_template("changes_history.html", all_changes=all_changes)
 
 @app.route("/receive", methods=["GET", "POST"])
 def receive():
     """Allow non-admin user to confirm the arrival of medicine to their clinic"""
     return apology("TODO")
-
 
 # Run the app
 if __name__ == "__main__":
