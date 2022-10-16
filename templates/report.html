@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Báo cáo theo thuốc
+{% endblock %}
+
+{% block main %}
+    <form action="/report" method="post">
+        <div class="row mb-3">
+            <div class="col">
+                Lọc theo: 
+            </div>
+            <div class="col">
+                <input type="number" min="1" max="31" class="form-control" name="filter_day" placeholder="Ngày (DD)">
+            </div>
+            <div class="col">
+                <input type="number" min="1" max="12" class="form-control" name="filter_month" placeholder="Tháng (MM)">
+            </div>
+            <div class="col">
+                <input type="number" class="form-control" name="filter_year" placeholder="Năm (YYYY)" value="2022">
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="filter_med" placeholder="Thuốc">
+            </div>
+            <div class="col">
+                <select class="form-select" name="filter_place" placeholder="Nơi xuất">
+                    <option value="">Nơi xuất</option>
+                    <option value="--">--</option>
+                    <option value="Phung">Phùng</option>
+                    <option value="ThachThat">Thạch Thất</option>
+                    <option value="BaTha">Ba Thá</option>
+                    <option value="PhongMo">Phòng mổ</option>
+                    <option value="68A">68A</option>
+                </select>
+            </div>
+            <div class="col">
+                <button class="btn btn-primary" type="submit">Tạo báo cáo</button>
+            </div>
+            <div class="col">
+                <button class="btn btn-danger" type="submit">Làm mới trang</button>
+            </div>
+        </div mb-3>
+    </form>
+    <table class="table table-hover table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Tên thuốc</th>
+                <th>Tổng số lượng</th>
+                <th>Tổng giá trị</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in med_report %}
+                <tr>
+                    <td>{{ med[0] }}</td>
+                    <td>{{ '{:,}'.format(med[1]) }}</td>
+                    <td>{{ '{:,}'.format(med[2]) }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

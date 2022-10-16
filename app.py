@@ -679,13 +679,30 @@ def changes():
 
 @app.route("/report", methods=["GET", "POST"])
 def report():
-    """Allow non-admin user to confirm the arrival of medicine to their clinic"""
-    med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter_by(sale_place="Phung").group_by(BuySellHistory.medicine)
+    """Allow user to generate report of the outgoing medicine to each sale place"""
+    if request.method == "GET":
+        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).group_by(BuySellHistory.medicine)
+    else:
+        # Getting input from the user
+        filter_day = request.form.get("filter_day")
+        filter_month = request.form.get("filter_month")
+        filter_year = request.form.get("filter_year")
+        filter_med = request.form.get("filter_med").lower()
+        filter_place = request.form.get("filter_place").lower()
 
-    for item in med_report:
-        print(item)
-    return apology("TODO")
+        queries = []
 
+        # Add to our queries if the user input something in the field
+        if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
+        if filter_month: queries.append(func.strftime("%m", BuySellHistory.action_time) == filter_month)
+        if filter_year: queries.append(func.strftime("%Y", BuySellHistory.action_time) == filter_year)
+        if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
+        if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
+
+        flash(f"Lọc theo ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}")
+        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
+
+    return render_template("report.html", med_report=med_report)
 # Run the app
 if __name__ == "__main__":
     app.run()
