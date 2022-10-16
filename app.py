@@ -44,9 +44,10 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key = True)
     username = db.Column(db.Text, unique = True, nullable = False)
     hash = db.Column(db.Text, nullable = False)
-    user_type = db.Column(db.Text, nullable = False, default = "non-admin")
+    user_type = db.Column(db.Text, nullable = False)
 
 class Medicine(db.Model):
+    user_type = db.Column(db.Text, nullable = False)
     med_id = db.Column(db.Integer, primary_key = True)
     med_name = db.Column(db.Text, unique = True, nullable = False)
     med_quantity = db.Column(db.Text, nullable = False)
@@ -57,6 +58,7 @@ class Medicine(db.Model):
     med_notes = db.Column(db.Text) 
 
 class ChangedInfo(db.Model):
+    user_type = db.Column(db.Text, nullable = False)
     change_id = db.Column(db.Integer, primary_key = True)
     changed_by = db.Column(db.Text, nullable = False)
     changed_time = db.Column(db.DateTime, nullable = False)
@@ -68,6 +70,7 @@ class ChangedInfo(db.Model):
     change_notes = db.Column(db.Text)
 
 class BuySellHistory(db.Model):
+    user_type = db.Column(db.Text, nullable = False)
     action_id = db.Column(db.Integer, primary_key = True)
     performed_by = db.Column(db.Text, nullable = False)
     action_time = db.Column(db.DateTime, nullable = False)
@@ -103,7 +106,10 @@ def after_request(response):
 @login_required
 def index():
     '''Show portfolio of medicine: med_id, med_name, current_inventory, latest_price'''
-    all_meds = Medicine.query.order_by(Medicine.med_name).all()
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [Medicine.user_type == user_type]
+
+    all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
     return render_template("index.html", all_meds=all_meds)
 
 
@@ -175,13 +181,24 @@ def register():
         if password != pw_cf:
             return apology("Mat khau va xac nhan khong khop", 400)
 
-        # Finally, when all fields are submitted and is valid, check for uniqueness of username
-        if len(User.query.filter_by(username=username).all()) == 0 and code_entered == SECRET_CODE_1:
+        # Finally, when all fields are submitted and is valid, check for uniqueness of username and correctness of code
+        
+        # If user enters code for type of user who can only deal with medicines
+        if code_entered == SECRET_CODE_1:
+            user_type = "thuoc"
+        # If user enters code for type of user who can only deal with medical materials
+        elif code_entered == SECRET_CODE_2:
+            user_type = "vattu"
+        # Otherwise, user is not authorized
+        else:
+            user_type = None
+
+        if len(User.query.filter_by(username=username).all()) == 0 and user_type:
             # we then add the new user to our data base
             new_user = User(
                 username=username,
                 hash=generate_password_hash(password, method='pbkdf2:sha256', salt_length=8),
-                user_type="authorized"
+                user_type=user_type
             )
             db.session.add(new_user)
             db.session.commit()
@@ -199,9 +216,11 @@ def register():
 @login_required
 def buy():
     """Let user buy more of the medicine that they already have on the database"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [Medicine.user_type == user_type]
     # Query for all the existing meds to render buy.html if the user haven't submitted the form
     if request.method == "GET":
-        all_meds = Medicine.query.order_by(Medicine.med_name).all()
+        all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
         return render_template("buy.html", all_meds=all_meds)
     else:
         # Getting the information about the medicine that user wants to buy
@@ -240,6 +259,7 @@ def buy():
             current_IP = request.environ['REMOTE_ADDR']
             
             new_purchase = BuySellHistory(
+                user_type=user_type,
                 performed_by=current_user,
                 action_time=current_time,
                 action_IP=current_IP,
@@ -268,8 +288,11 @@ def buy():
 @login_required
 def sell():
     """Let user sell medicine to different places"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [Medicine.user_type == user_type]
+
     if request.method == "GET":
-        all_meds = Medicine.query.order_by(Medicine.med_name).all()
+        all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
         return render_template("sell.html", all_meds=all_meds)
     else:
         # Getting existing information from the database
@@ -309,6 +332,7 @@ def sell():
                 current_IP = request.environ['REMOTE_ADDR']
 
                 new_sale = BuySellHistory(
+                    user_type=user_type,
                     performed_by=current_user,
                     action_time=current_time,
                     action_IP=current_IP,
@@ -336,10 +360,11 @@ def sell():
 @login_required
 def history():
     """Let user see all transactions and filter data"""
-
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [BuySellHistory.user_type == user_type]
     # If the user just got to the page through the links, without any filter:
     if request.method == "GET":
-        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).all()
+        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
     # Else if the user has submitted a filter
     else:
         # Getting the input from the user: 
@@ -350,9 +375,6 @@ def history():
         filter_med = request.form.get("filter_med").lower()
         filter_place = request.form.get("filter_place").lower()
         filter_action = request.form.get("filter_action")
-
-        # Creating an empty list for the queries we will perform
-        queries = []
 
         if filter_user: queries.append(BuySellHistory.performed_by == filter_user)
         if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
@@ -400,6 +422,7 @@ def update():
 @login_required
 def addnew():
     """Allow user to add new medicine"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
     # We first get the input from user
     med_name = request.form.get("medname")
     med_quantity = str(request.form.get("quantity"))
@@ -415,6 +438,7 @@ def addnew():
     if len(Medicine.query.filter_by(med_name=med_name).all()) == 0:
         # We add this confirmed new medicine to the db:
         new_med = Medicine(
+            user_type=user_type,
             med_name=med_name,
             med_unit=med_unit,
             med_quantity=med_quantity,
@@ -431,6 +455,7 @@ def addnew():
         current_IP = request.environ['REMOTE_ADDR']
 
         new_add = BuySellHistory(
+            user_type=user_type,
             performed_by=current_user,
             action_time=current_time,
             action_IP=current_IP,
@@ -462,11 +487,14 @@ def addnew():
 @login_required
 def correct_record():
     """Allow user to change med info or transaction info"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [Medicine.user_type == user_type]
+
     # When user wants to change existing med info:
     # Will have to query Medicine database to get all meds name
     if request.form.get("btnradio") == "med_info":
         # Query for all records of medicine from database
-        existing_meds = Medicine.query.order_by(Medicine.med_name).all()
+        existing_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
         return render_template("change_med.html", existing_meds=existing_meds)
     
     # Else if the user wants to change transaction records
@@ -478,6 +506,7 @@ def correct_record():
 @login_required
 def change_med():
     """Allow user to change existing information about a medicine"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
     # Determine the medicine in need of change
     med_name = (request.form.get("medname").split(" - "))[0]
     # Query existing data about that medicine:
@@ -509,6 +538,7 @@ def change_med():
     change_notes = request.form.get("med_notes")
 
     new_change = ChangedInfo(
+        user_type = user_type,
         changed_by = current_user,
         changed_time = current_time,
         client_IP = current_IP,
@@ -529,6 +559,8 @@ def change_med():
 @app.route("/change_med_confirm", methods=["POST"])
 @login_required
 def change_med_confirm():
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+
     # Get the name of the medicine that the user is modifying
     med_name = request.form.get("medname")
     # Query the latest change made to that particular medicine in the change info table
@@ -576,6 +608,7 @@ def delete_initial():
 @app.route("/delete_final", methods=["POST"])
 @login_required
 def delete_final():
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
     # Get the ID of the transaction that user wants to delete
     trans_id = request.form.get("trans_id")
 
@@ -606,6 +639,7 @@ def delete_final():
         }
         
         new_delete = ChangedInfo(
+            user_type = user_type,
             changed_by = current_user,
             changed_time = current_time,
             client_IP = current_IP,
@@ -649,9 +683,11 @@ def delete_final():
 @login_required
 def changes():
     """Allow user to see existing records of changes made in med info or transaction info"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [ChangedInfo.user_type == user_type]
     # Query the ChangedInfo table to get all the changes made by user
     if request.method == "GET":
-        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).all()
+        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
     else:
         # Getting input from the user
         filter_user = request.form.get("filter_user")
@@ -660,9 +696,6 @@ def changes():
         filter_year = request.form.get("filter_year")
         filter_med = request.form.get("filter_med")
         filter_type = request.form.get("filter_type")
-
-        # Creating an empty list for the queries we will perform
-        queries = []
 
         if filter_user: queries.append(ChangedInfo.changed_by == filter_user)
         if filter_day: queries.append(func.strftime("%d", ChangedInfo.changed_time) == filter_day)
@@ -680,8 +713,11 @@ def changes():
 @app.route("/report", methods=["GET", "POST"])
 def report():
     """Allow user to generate report of the outgoing medicine to each sale place"""
+    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    queries = [BuySellHistory.user_type == user_type]
+
     if request.method == "GET":
-        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).group_by(BuySellHistory.medicine)
+        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
     else:
         # Getting input from the user
         filter_day = request.form.get("filter_day")
@@ -689,8 +725,6 @@ def report():
         filter_year = request.form.get("filter_year")
         filter_med = request.form.get("filter_med").lower()
         filter_place = request.form.get("filter_place").lower()
-
-        queries = []
 
         # Add to our queries if the user input something in the field
         if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
