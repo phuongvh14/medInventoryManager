@@ -16,8 +16,8 @@ from datetime import datetime, timedelta
 from helpers import apology,  login_required, vnd
 
 # Secret code to register
-SECRET_CODE_1 = os.getenv("SECRET_CODE_1")
-SECRET_CODE_2 = os.getenv("SECRET_CODE_2")
+SECRET_CODE_1 = os.environ.get("SECRET_CODE_1")
+SECRET_CODE_2 = os.environ.get("SECRET_CODE_2")
 
 # Configure application
 app = Flask(__name__)
@@ -34,7 +34,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Create database
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///medicine-inventory.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 # Silence the deprication warning in the console
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
