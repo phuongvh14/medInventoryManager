@@ -66,6 +66,10 @@
     </main>
 
     <footer class="mb-5 small text-center text-muted">
+        {% if session["user_id"] %}
+            Người dùng đang đăng nhập: {{ current_user }}
+            <br>
+        {% endif %}
         Project inspired by <a href="https://cs50.harvard.edu/x/2022/psets/9/finance/">Harvard's CS50: Finance</a>
     </footer>
 </body>

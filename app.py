@@ -106,11 +106,13 @@ def after_request(response):
 @login_required
 def index():
     '''Show portfolio of medicine: med_id, med_name, current_inventory, latest_price'''
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [Medicine.user_type == user_type]
 
     all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-    return render_template("index.html", all_meds=all_meds)
+    return render_template("index.html", all_meds=all_meds, current_user=current_user)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -216,12 +218,15 @@ def register():
 @login_required
 def buy():
     """Let user buy more of the medicine that they already have on the database"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [Medicine.user_type == user_type]
+
     # Query for all the existing meds to render buy.html if the user haven't submitted the form
     if request.method == "GET":
         all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("buy.html", all_meds=all_meds)
+        return render_template("buy.html", all_meds=all_meds, current_user=current_user)
     else:
         # Getting the information about the medicine that user wants to buy
         med_info = request.form.get("medname").split(" - ")
@@ -254,7 +259,6 @@ def buy():
             db.session.commit()
 
             # Then we will need to record this purchase in the purchase history database
-            current_user = User.query.filter_by(user_id=session["user_id"]).first().username
             current_time = datetime.now()
             current_IP = request.environ['REMOTE_ADDR']
             
@@ -288,12 +292,14 @@ def buy():
 @login_required
 def sell():
     """Let user sell medicine to different places"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [Medicine.user_type == user_type]
 
     if request.method == "GET":
         all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("sell.html", all_meds=all_meds)
+        return render_template("sell.html", all_meds=all_meds, current_user=current_user)
     else:
         # Getting existing information from the database
         med_info = request.form.get("medname").split(" - ")
@@ -360,7 +366,9 @@ def sell():
 @login_required
 def history():
     """Let user see all transactions and filter data"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [BuySellHistory.user_type == user_type]
     # If the user just got to the page through the links, without any filter:
     if request.method == "GET":
@@ -402,27 +410,33 @@ def history():
         
         money_total += int(transaction.action_total)
 
-    return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total))
+    return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total), current_user=current_user)
 
 
 @app.route("/update", methods=["GET", "POST"])
 @login_required
 def update():
     """Allow user to update existing records, like adding new medicine, or updating a transaction"""
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+
     if request.method == "GET":
-        return render_template("update.html")
+        return render_template("update.html", current_user=current_user)
     else:
         if request.form.get("btnradio") == "add_new":
-            return render_template("add_new.html")
+            return render_template("add_new.html", current_user=current_user)
         else:
-            return render_template("correct_record.html")
+            return render_template("correct_record.html", current_user=current_user)
 
 
 @app.route("/addnew", methods=["POST"])
 @login_required
 def addnew():
     """Allow user to add new medicine"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
+
     # We first get the input from user
     med_name = request.form.get("medname")
     med_quantity = str(request.form.get("quantity"))
@@ -450,7 +464,6 @@ def addnew():
         db.session.add(new_med)
         db.session.commit()
 
-        current_user = User.query.filter_by(user_id=session["user_id"]).first().username
         current_time = datetime.now()
         current_IP = request.environ['REMOTE_ADDR']
 
@@ -487,7 +500,9 @@ def addnew():
 @login_required
 def correct_record():
     """Allow user to change med info or transaction info"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [Medicine.user_type == user_type]
 
     # When user wants to change existing med info:
@@ -495,18 +510,20 @@ def correct_record():
     if request.form.get("btnradio") == "med_info":
         # Query for all records of medicine from database
         existing_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("change_med.html", existing_meds=existing_meds)
+        return render_template("change_med.html", existing_meds=existing_meds, current_user=current_user)
     
     # Else if the user wants to change transaction records
     else:
-        return render_template("fix_transaction.html")
+        return render_template("fix_transaction.html", current_user=current_user)
 
 
 @app.route("/change_med", methods=["POST"])
 @login_required
 def change_med():
     """Allow user to change existing information about a medicine"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     # Determine the medicine in need of change
     med_name = (request.form.get("medname").split(" - "))[0]
     # Query existing data about that medicine:
@@ -532,7 +549,6 @@ def change_med():
     }
 
     # Adding the data to the ChangedInfo database:
-    current_user = User.query.filter_by(user_id=session["user_id"]).first().username
     current_time = datetime.now()
     current_IP = request.environ['REMOTE_ADDR']
     change_notes = request.form.get("med_notes")
@@ -559,8 +575,6 @@ def change_med():
 @app.route("/change_med_confirm", methods=["POST"])
 @login_required
 def change_med_confirm():
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
-
     # Get the name of the medicine that the user is modifying
     med_name = request.form.get("medname")
     # Query the latest change made to that particular medicine in the change info table
@@ -599,16 +613,27 @@ def change_med_confirm():
 @app.route("/delete_initial", methods=["POST"])
 @login_required
 def delete_initial():
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
+
     # First we will get the transaction ID that user wants to delete
     trans_id = int(request.form.get("trans_id"))
-    trans_info = BuySellHistory.query.filter_by(action_id=trans_id).first()
-    return render_template("delete_confirm.html", trans_info=trans_info)
 
+    trans_info = BuySellHistory.query.filter_by(action_id=trans_id).first()
+    # If the user wanting to modify the transaction is the right type of user:
+    if trans_info.user_type == user_type:
+        return render_template("delete_confirm.html", trans_info=trans_info, current_user=current_user)
+    else:
+        flash(f"Tài khoản chỉ được sửa giao dịch liên quan đến {user_type}")
+        return apology(f"Tai khoan chi duoc sua {user_type}", 400)
 
 @app.route("/delete_final", methods=["POST"])
 @login_required
 def delete_final():
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     # Get the ID of the transaction that user wants to delete
     trans_id = request.form.get("trans_id")
 
@@ -617,7 +642,6 @@ def delete_final():
         # Log the deletion in the changes database
         changing_trans = BuySellHistory.query.filter_by(action_id=trans_id).first()
 
-        current_user = User.query.filter_by(user_id=session["user_id"]).first().username
         current_time = datetime.now()
         current_IP = request.environ['REMOTE_ADDR']
         changed_from = {
@@ -683,7 +707,9 @@ def delete_final():
 @login_required
 def changes():
     """Allow user to see existing records of changes made in med info or transaction info"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [ChangedInfo.user_type == user_type]
     # Query the ChangedInfo table to get all the changes made by user
     if request.method == "GET":
@@ -708,12 +734,14 @@ def changes():
         all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
 
 
-    return render_template("changes_history.html", all_changes=all_changes)
+    return render_template("changes_history.html", all_changes=all_changes, current_user=current_user)
 
 @app.route("/report", methods=["GET", "POST"])
 def report():
     """Allow user to generate report of the outgoing medicine to each sale place"""
-    user_type = User.query.filter_by(user_id=session["user_id"]).first().user_type
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
     queries = [BuySellHistory.user_type == user_type]
 
     if request.method == "GET":
@@ -736,7 +764,9 @@ def report():
         flash(f"Lọc theo ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}")
         med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
 
-    return render_template("report.html", med_report=med_report)
+    return render_template("report.html", med_report=med_report, current_user=current_user)
+
+
 # Run the app
 if __name__ == "__main__":
     app.run()
