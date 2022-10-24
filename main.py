@@ -390,9 +390,9 @@ def history():
         filter_action = request.form.get("filter_action")
 
         if filter_user: queries.append(BuySellHistory.performed_by == filter_user)
-        if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
-        if filter_month: queries.append(func.strftime("%m", BuySellHistory.action_time) == filter_month)
-        if filter_year: queries.append(func.strftime("%Y", BuySellHistory.action_time) == filter_year)
+        if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
+        if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
+        if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
         if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
         if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
         if filter_action: queries.append(BuySellHistory.action == filter_action)
@@ -729,9 +729,9 @@ def changes():
         filter_type = request.form.get("filter_type")
 
         if filter_user: queries.append(ChangedInfo.changed_by == filter_user)
-        if filter_day: queries.append(func.strftime("%d", ChangedInfo.changed_time) == filter_day)
-        if filter_month: queries.append(func.strftime("%m", ChangedInfo.changed_time) == filter_month)
-        if filter_year: queries.append(func.strftime("%Y", ChangedInfo.changed_time) == filter_year)
+        if filter_day: queries.append(func.to_char(ChangedInfo.changed_time, "DD") == filter_day)
+        if filter_month: queries.append(func.to_char(ChangedInfo.changed_time, "MM") == filter_month)
+        if filter_year: queries.append(func.to_char(ChangedInfo.changed_time, "YYYY") == filter_year)
         if filter_med: queries.append(func.lower(ChangedInfo.medicine) == filter_med)
         if filter_type: queries.append(ChangedInfo.change_type == filter_type)
     
@@ -760,9 +760,9 @@ def report():
         filter_place = request.form.get("filter_place").lower()
 
         # Add to our queries if the user input something in the field
-        if filter_day: queries.append(func.strftime("%d", BuySellHistory.action_time) == filter_day)
-        if filter_month: queries.append(func.strftime("%m", BuySellHistory.action_time) == filter_month)
-        if filter_year: queries.append(func.strftime("%Y", BuySellHistory.action_time) == filter_year)
+        if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
+        if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
+        if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
         if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
         if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
 
