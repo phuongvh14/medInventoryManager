@@ -10,7 +10,7 @@
     </div>
     <form action="/sell" method="post">
         <div class="mb-3">
-            <input required class="form-control mx-auto w-auto" list="datalistMed" id="medname" name="medname" placeholder="Thuốc muốn xuất">
+            <input required class="form-control mx-auto w-auto" autocomplete="off" list="datalistMed" id="medname" name="medname" placeholder="Thuốc muốn xuất">
             <datalist id="datalistMed">
                 {% for med in all_meds %}
                     <option>{{ med.med_name }} - Tồn: {{ med.med_quantity_formatted }} - Đơn vị: {{ med.med_unit }} - Giá xuất: {{ med.med_price_formatted }}</option>
