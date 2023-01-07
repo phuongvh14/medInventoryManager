@@ -16,8 +16,8 @@ from datetime import datetime, timedelta
 from helpers import apology,  login_required, vnd
 
 # Secret code to register
-SECRET_CODE_1 = os.environ.get("SECRET_CODE_1")
-SECRET_CODE_2 = os.environ.get("SECRET_CODE_2")
+SECRET_CODE_1 = "toanhoc"
+SECRET_CODE_2 = "vanhoc"
 
 # Configure application
 app = Flask(__name__)
@@ -35,11 +35,8 @@ Session(app)
 
 # Create database
 # Getting the URL to postgres
-uri = os.environ.get("DATABASE_URL")
-if uri and uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql://", 1)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///medicine-inventory.db"
 # Silence the deprication warning in the console
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
