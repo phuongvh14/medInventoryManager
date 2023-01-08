@@ -18,6 +18,7 @@ from helpers import apology,  login_required, vnd
 # Secret code to register
 SECRET_CODE_1 = "toanhoc"
 SECRET_CODE_2 = "vanhoc"
+SECRET_CODE_3 = "nhanhoc"
 
 # Configure application
 app = Flask(__name__)
@@ -110,7 +111,7 @@ def index():
     '''Show portfolio of medicine: med_id, med_name, current_inventory, latest_price'''
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [Medicine.user_type == user_type]
 
     all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
@@ -193,6 +194,8 @@ def register():
         # If user enters code for type of user who can only deal with medical materials
         elif code_entered == SECRET_CODE_2:
             user_type = "vattu"
+        elif code_entered == SECRET_CODE_3:
+            user_type = "nhanthuoc"           
         # Otherwise, user is not authorized
         else:
             user_type = None
@@ -739,6 +742,7 @@ def changes():
     return render_template("changes_history.html", all_changes=all_changes, current_user=current_user)
 
 @app.route("/report", methods=["GET", "POST"])
+@login_required
 def report():
     """Allow user to generate report of the outgoing medicine to each sale place"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
@@ -767,6 +771,14 @@ def report():
         med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
 
     return render_template("report.html", med_report=med_report, current_user=current_user)
+
+@app.route("/receive", methods=["GET", "POST"])
+@login_required
+def receive():
+    if request.method == "GET":
+        return render_template("receive.html")
+    else:
+        return render_template("med_receive.html")
 
 
 # Run the app

@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Nhận thuốc
+{% endblock %}
+
+{% block main %}
+<form action="/receive" method="post">
+    <div class="mb-3">
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="username" name="username" placeholder="Tên đăng nhập" type="text">
+    </div>
+    <div class="mb-3">
+        <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Mật khẩu" type="password">
+    </div>
+    <button class="btn btn-primary" type="submit">Đăng nhập</button>
+</form>
+{% endblock %}
