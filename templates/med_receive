@@ -1,9 +1,0 @@
-{% extends "layout.html" %}
-
-{% block title %}
-    Nhận thuốc
-{% endblock %}
-
-{% block main %}
- <h1>Some more thinking to be done here</h1>
-{% endblock %}

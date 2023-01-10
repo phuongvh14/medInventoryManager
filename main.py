@@ -11,7 +11,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, Integer
 from tempfile import mkdtemp
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime
+import pytz
 
 from helpers import apology,  login_required, vnd
 
@@ -114,8 +115,13 @@ def index():
     user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [Medicine.user_type == user_type]
 
-    all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-    return render_template("index.html", all_meds=all_meds, current_user=current_user)
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
+
+    else:
+        all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
+        return render_template("index.html", all_meds=all_meds, current_user=current_user)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -225,72 +231,78 @@ def buy():
     """Let user buy more of the medicine that they already have on the database"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [Medicine.user_type == user_type]
-
-    # Query for all the existing meds to render buy.html if the user haven't submitted the form
-    if request.method == "GET":
-        all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("buy.html", all_meds=all_meds, current_user=current_user)
+    
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
+    
     else:
-        # Getting the information about the medicine that user wants to buy
-        med_info = request.form.get("medname").split(" - ")
-        # From that information, get the name, which is the first element in the list after splitting by " - "
-        med_name = med_info[0]
-        # Then, we will get the recorded unit of med, to prevent buying in different units
-        med_recorded_quant = med_info[1].split(": ")[1]
-        med_recorded_unit = med_info[2].split(": ")[1]
-        med_recorded_price = med_info[3].split(": ")[1]
-        # Then we will get the other information in order to add to database
-        user_chosen_unit = request.form.get("medunit")
-        med_quantity = int(request.form.get("quantity"))
-        med_price = int(request.form.get("medprice"))
-        purchase_total = med_quantity * med_price
-        med_notes = request.form.get("med_notes")
-
-        if med_recorded_unit != user_chosen_unit:
-            flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn nhập: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
-            return apology("Sai don vi thuoc!", 400)
+        # Query for all the existing meds to render buy.html if the user haven't submitted the form
+        if request.method == "GET":
+            all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
+            return render_template("buy.html", all_meds=all_meds, current_user=current_user)
         else:
-            # If the unit is correct, we will go ahead and query the medicine from database:
-            changing_med = Medicine.query.filter_by(med_name=med_name).first()
-            # And then update it with the new value
-            new_quantity = med_quantity + int(changing_med.med_quantity)
-            changing_med.med_quantity = str(new_quantity)
-            changing_med.med_quantity_formatted = vnd(new_quantity)
-            changing_med.med_latest_price = str(med_price)
-            changing_med.med_price_formatted = vnd(med_price)
-            changing_med.med_notes = med_notes
-            db.session.commit()
+            # Getting the information about the medicine that user wants to buy
+            med_info = request.form.get("medname").split(" - ")
+            # From that information, get the name, which is the first element in the list after splitting by " - "
+            med_name = med_info[0]
+            # Then, we will get the recorded unit of med, to prevent buying in different units
+            med_recorded_quant = med_info[1].split(": ")[1]
+            med_recorded_unit = med_info[2].split(": ")[1]
+            med_recorded_price = med_info[3].split(": ")[1]
+            # Then we will get the other information in order to add to database
+            user_chosen_unit = request.form.get("medunit")
+            med_quantity = int(request.form.get("quantity"))
+            med_price = int(request.form.get("medprice"))
+            purchase_total = med_quantity * med_price
+            med_notes = request.form.get("med_notes")
 
-            # Then we will need to record this purchase in the purchase history database
-            current_time = datetime.now()
-            current_IP = request.environ['REMOTE_ADDR']
-            
-            new_purchase = BuySellHistory(
-                user_type=user_type,
-                performed_by=current_user,
-                action_time=current_time,
-                action_IP=current_IP,
-                medicine=med_name,
-                quantity=str(med_quantity),
-                quantity_formatted=f"+{vnd(med_quantity)}",
-                unit=med_recorded_unit,
-                price=str(med_price),
-                price_formatted=vnd(med_price),
-                action_total=str(purchase_total),
-                action_total_formatted=vnd(purchase_total),
-                sale_place="--",
-                action="nhap",
-                previous_price=med_recorded_price,
-                previous_quantity=med_recorded_quant,
-                action_notes=med_notes,
-            )
-            db.session.add(new_purchase)
-            db.session.commit()
+            if med_recorded_unit != user_chosen_unit:
+                flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn nhập: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
+                return apology("Sai don vi thuoc!", 400)
+            else:
+                # If the unit is correct, we will go ahead and query the medicine from database:
+                changing_med = Medicine.query.filter_by(med_name=med_name).first()
+                # And then update it with the new value
+                new_quantity = med_quantity + int(changing_med.med_quantity)
+                changing_med.med_quantity = str(new_quantity)
+                changing_med.med_quantity_formatted = vnd(new_quantity)
+                changing_med.med_latest_price = str(med_price)
+                changing_med.med_price_formatted = vnd(med_price)
+                changing_med.med_notes = med_notes
+                db.session.commit()
 
-            flash("Nhập thuốc thành công!")
-            return redirect("/")
+                # Then we will need to record this purchase in the purchase history database
+                utc_now = datetime.now(pytz.utc)
+                current_time = utc_now.astimezone(pytz.timezone('Asia/Bangkok'))
+                current_IP = request.environ['REMOTE_ADDR']
+                
+                new_purchase = BuySellHistory(
+                    user_type=user_type,
+                    performed_by=current_user,
+                    action_time=current_time,
+                    action_IP=current_IP,
+                    medicine=med_name,
+                    quantity=str(med_quantity),
+                    quantity_formatted=f"+{vnd(med_quantity)}",
+                    unit=med_recorded_unit,
+                    price=str(med_price),
+                    price_formatted=vnd(med_price),
+                    action_total=str(purchase_total),
+                    action_total_formatted=vnd(purchase_total),
+                    sale_place="--",
+                    action="nhap",
+                    previous_price=med_recorded_price,
+                    previous_quantity=med_recorded_quant,
+                    action_notes=med_notes,
+                )
+                db.session.add(new_purchase)
+                db.session.commit()
+
+                flash("Nhập thuốc thành công!")
+                return redirect("/")
 
 
 @app.route("/sell", methods=["GET", "POST"])
@@ -299,73 +311,78 @@ def sell():
     """Let user sell medicine to different places"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [Medicine.user_type == user_type]
 
-    if request.method == "GET":
-        all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("sell.html", all_meds=all_meds, current_user=current_user)
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
+
     else:
-        # Getting existing information from the database
-        med_info = request.form.get("medname").split(" - ")
-        med_name = med_info[0]
-        med_recorded_quant = med_info[1].split(": ")[1]
-        med_recorded_unit = med_info[2].split(": ")[1]
-        med_recorded_price = med_info[3].split(": ")[1]
-
-        # Getting user input
-        user_chosen_unit = request.form.get("medunit")
-        sale_place = request.form.get("place")
-        sale_quantity = int(request.form.get("quantity"))
-        sale_price = int(request.form.get("medprice"))
-        sale_total = sale_quantity * sale_price
-        sale_notes = request.form.get("med_notes")
-
-        if med_recorded_unit != user_chosen_unit:
-            flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn muốn xuất: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
-            return apology("Sai don vi thuoc!", 400)
+        if request.method == "GET":
+            all_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
+            return render_template("sell.html", all_meds=all_meds, current_user=current_user)
         else:
-            # If the unit is correct, we will go ahead and query the medicine from database:
-            changing_med = Medicine.query.filter_by(med_name=med_name).first()
-            # Check if there is enough left to sell:
-            if int(changing_med.med_quantity) < sale_quantity:
-                flash("Số lượng thuốc tồn không đủ để xuất!")
-                return apology("Khong du thuoc de xuat!", 400)
+            # Getting existing information from the database
+            med_info = request.form.get("medname").split(" - ")
+            med_name = med_info[0]
+            med_recorded_quant = med_info[1].split(": ")[1]
+            med_recorded_unit = med_info[2].split(": ")[1]
+            med_recorded_price = med_info[3].split(": ")[1]
+
+            # Getting user input
+            user_chosen_unit = request.form.get("medunit")
+            sale_place = request.form.get("place")
+            sale_quantity = int(request.form.get("quantity"))
+            sale_price = int(request.form.get("medprice"))
+            sale_total = sale_quantity * sale_price
+            sale_notes = request.form.get("med_notes")
+
+            if med_recorded_unit != user_chosen_unit:
+                flash(f"Đơn vị hiện tại: {med_recorded_unit}. Đơn vị bạn muốn xuất: {user_chosen_unit}. Vui lòng cập nhật thông tin thuốc hoặc điền lại!")
+                return apology("Sai don vi thuoc!", 400)
             else:
-                new_quantity = int(changing_med.med_quantity) - sale_quantity
-                changing_med.med_quantity = str(new_quantity)
-                changing_med.med_quantity_formatted = vnd(new_quantity)
-                changing_med.med_notes = sale_notes
-                db.session.commit()
+                # If the unit is correct, we will go ahead and query the medicine from database:
+                changing_med = Medicine.query.filter_by(med_name=med_name).first()
+                # Check if there is enough left to sell:
+                if int(changing_med.med_quantity) < sale_quantity:
+                    flash("Số lượng thuốc tồn không đủ để xuất!")
+                    return apology("Khong du thuoc de xuat!", 400)
+                else:
+                    new_quantity = int(changing_med.med_quantity) - sale_quantity
+                    changing_med.med_quantity = str(new_quantity)
+                    changing_med.med_quantity_formatted = vnd(new_quantity)
+                    changing_med.med_notes = sale_notes
+                    db.session.commit()
 
-                current_user = User.query.filter_by(user_id=session["user_id"]).first().username
-                current_time = datetime.now()
-                current_IP = request.environ['REMOTE_ADDR']
+                    utc_now = datetime.now(pytz.utc)
+                    current_time = utc_now.astimezone(pytz.timezone('Asia/Bangkok'))
+                    current_IP = request.environ['REMOTE_ADDR']
 
-                new_sale = BuySellHistory(
-                    user_type=user_type,
-                    performed_by=current_user,
-                    action_time=current_time,
-                    action_IP=current_IP,
-                    medicine=med_name,
-                    quantity=str(sale_quantity),
-                    quantity_formatted=f"-{vnd(sale_quantity)}",
-                    unit=med_recorded_unit,
-                    price=str(sale_price),
-                    price_formatted=vnd(sale_price),
-                    action_total=str(sale_total),
-                    action_total_formatted=vnd(sale_total),
-                    sale_place=sale_place,
-                    action="xuat",
-                    previous_price=med_recorded_price,
-                    previous_quantity=med_recorded_quant,
-                    action_notes=sale_notes,
-                )
-                db.session.add(new_sale)
-                db.session.commit()
+                    new_sale = BuySellHistory(
+                        user_type=user_type,
+                        performed_by=current_user,
+                        action_time=current_time,
+                        action_IP=current_IP,
+                        medicine=med_name,
+                        quantity=str(sale_quantity),
+                        quantity_formatted=f"-{vnd(sale_quantity)}",
+                        unit=med_recorded_unit,
+                        price=str(sale_price),
+                        price_formatted=vnd(sale_price),
+                        action_total=str(sale_total),
+                        action_total_formatted=vnd(sale_total),
+                        sale_place=sale_place,
+                        action="xuat",
+                        previous_price=med_recorded_price,
+                        previous_quantity=med_recorded_quant,
+                        action_notes=sale_notes,
+                    )
+                    db.session.add(new_sale)
+                    db.session.commit()
 
-                flash("Xuất thuốc thành công!")
-                return redirect("/")
+                    flash("Xuất thuốc thành công!")
+                    return redirect("/")
 
 @app.route("/history", methods=["GET", "POST"])
 @login_required
@@ -373,49 +390,55 @@ def history():
     """Let user see all transactions and filter data"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [BuySellHistory.user_type == user_type]
-    # If the user just got to the page through the links, without any filter:
-    if request.method == "GET":
-        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
-    # Else if the user has submitted a filter
+
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
+
     else:
-        # Getting the input from the user: 
-        filter_user = request.form.get("filter_user")
-        filter_day = request.form.get("filter_day")
-        filter_month = request.form.get("filter_month")
-        filter_year = request.form.get("filter_year")
-        filter_med = request.form.get("filter_med").lower()
-        filter_place = request.form.get("filter_place").lower()
-        filter_action = request.form.get("filter_action")
-
-        if filter_user: queries.append(BuySellHistory.performed_by == filter_user)
-        if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
-        if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
-        if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
-        if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
-        if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
-        if filter_action: queries.append(BuySellHistory.action == filter_action)
-
-        # Now that we have all the filters user wants:
-        flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}, nhập/xuất:{filter_action}")
-        all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
-
-    quantity_total = 0
-    money_total = 0
-
-    for transaction in all_transactions:
-        # If the action was buying, we don't care about the money
-        if transaction.sale_place == "--":
-            quantity_total += int(transaction.quantity)
-
-        # If the action was selling, we care about the money
+        # If the user just got to the page through the links, without any filter:
+        if request.method == "GET":
+            all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
+        # Else if the user has submitted a filter
         else:
-            quantity_total -= int(transaction.quantity)
-        
-        money_total += int(transaction.action_total)
+            # Getting the input from the user: 
+            filter_user = request.form.get("filter_user")
+            filter_day = request.form.get("filter_day")
+            filter_month = request.form.get("filter_month")
+            filter_year = request.form.get("filter_year")
+            filter_med = request.form.get("filter_med").lower()
+            filter_place = request.form.get("filter_place").lower()
+            filter_action = request.form.get("filter_action")
 
-    return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total), current_user=current_user)
+            if filter_user: queries.append(BuySellHistory.performed_by == filter_user)
+            if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
+            if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
+            if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
+            if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
+            if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
+            if filter_action: queries.append(BuySellHistory.action == filter_action)
+
+            # Now that we have all the filters user wants:
+            flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}, nhập/xuất:{filter_action}")
+            all_transactions = BuySellHistory.query.order_by(BuySellHistory.action_time.desc()).filter(*queries).all()
+
+        quantity_total = 0
+        money_total = 0
+
+        for transaction in all_transactions:
+            # If the action was buying, we don't care about the money
+            if transaction.sale_place == "--":
+                quantity_total += int(transaction.quantity)
+
+            # If the action was selling, we care about the money
+            else:
+                quantity_total -= int(transaction.quantity)
+            
+            money_total += int(transaction.action_total)
+
+        return render_template("transactions.html", all_transactions=all_transactions, quantity_total=vnd(quantity_total), money_total=vnd(money_total), current_user=current_user)
 
 
 @app.route("/update", methods=["GET", "POST"])
@@ -424,14 +447,19 @@ def update():
     """Allow user to update existing records, like adding new medicine, or updating a transaction"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
 
-    if request.method == "GET":
-        return render_template("update.html", current_user=current_user)
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
     else:
-        if request.form.get("btnradio") == "add_new":
-            return render_template("add_new.html", current_user=current_user)
+        if request.method == "GET":
+            return render_template("update.html", current_user=current_user)
         else:
-            return render_template("correct_record.html", current_user=current_user)
+            if request.form.get("btnradio") == "add_new":
+                return render_template("add_new.html", current_user=current_user)
+            else:
+                return render_template("correct_record.html", current_user=current_user)
 
 
 @app.route("/addnew", methods=["POST"])
@@ -440,65 +468,68 @@ def addnew():
     """Allow user to add new medicine"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
+    else: 
+        # We first get the input from user
+        med_name = request.form.get("medname")
+        med_quantity = str(request.form.get("quantity"))
+        quantity_formatted = vnd(int(request.form.get("quantity")))
+        med_unit = request.form.get("medunit")
+        med_price = str(request.form.get("latest_price"))
+        price_formatted = vnd(int(request.form.get("latest_price")))
+        med_notes = request.form.get("med_notes")
+        total = int(med_quantity) * int(med_price)
+        total_formatted = vnd(total)
+        
+        # If there is no meds in the existing database with the same name
+        if len(Medicine.query.filter_by(med_name=med_name).all()) == 0:
+            # We add this confirmed new medicine to the db:
+            new_med = Medicine(
+                user_type=user_type,
+                med_name=med_name,
+                med_unit=med_unit,
+                med_quantity=med_quantity,
+                med_quantity_formatted=quantity_formatted,
+                med_latest_price=med_price,
+                med_price_formatted=price_formatted,
+                med_notes=med_notes
+            )
+            db.session.add(new_med)
+            db.session.commit()
 
-    # We first get the input from user
-    med_name = request.form.get("medname")
-    med_quantity = str(request.form.get("quantity"))
-    quantity_formatted = vnd(int(request.form.get("quantity")))
-    med_unit = request.form.get("medunit")
-    med_price = str(request.form.get("latest_price"))
-    price_formatted = vnd(int(request.form.get("latest_price")))
-    med_notes = request.form.get("med_notes")
-    total = int(med_quantity) * int(med_price)
-    total_formatted = vnd(total)
-    
-    # If there is no meds in the existing database with the same name
-    if len(Medicine.query.filter_by(med_name=med_name).all()) == 0:
-        # We add this confirmed new medicine to the db:
-        new_med = Medicine(
-            user_type=user_type,
-            med_name=med_name,
-            med_unit=med_unit,
-            med_quantity=med_quantity,
-            med_quantity_formatted=quantity_formatted,
-            med_latest_price=med_price,
-            med_price_formatted=price_formatted,
-            med_notes=med_notes
-        )
-        db.session.add(new_med)
-        db.session.commit()
+            current_time = datetime.now()
+            current_IP = request.environ['REMOTE_ADDR']
 
-        current_time = datetime.now()
-        current_IP = request.environ['REMOTE_ADDR']
+            new_add = BuySellHistory(
+                user_type=user_type,
+                performed_by=current_user,
+                action_time=current_time,
+                action_IP=current_IP,
+                medicine=med_name,
+                quantity=med_quantity,
+                quantity_formatted=f"+{quantity_formatted}",
+                unit=med_unit,
+                price=med_price,
+                price_formatted=price_formatted,
+                action_total=total,
+                action_total_formatted=total_formatted,
+                sale_place="--",
+                action="them",
+                previous_price="chua co",
+                previous_quantity="chua co",
+                action_notes="Them thuoc chua ton tai tren he thong",
+            )
+            db.session.add(new_add)
+            db.session.commit()
 
-        new_add = BuySellHistory(
-            user_type=user_type,
-            performed_by=current_user,
-            action_time=current_time,
-            action_IP=current_IP,
-            medicine=med_name,
-            quantity=med_quantity,
-            quantity_formatted=f"+{quantity_formatted}",
-            unit=med_unit,
-            price=med_price,
-            price_formatted=price_formatted,
-            action_total=total,
-            action_total_formatted=total_formatted,
-            sale_place="--",
-            action="them",
-            previous_price="chua co",
-            previous_quantity="chua co",
-            action_notes="Them thuoc chua ton tai tren he thong",
-        )
-        db.session.add(new_add)
-        db.session.commit()
-
-        # And then we redirect user to the homepage after flashing a message
-        flash("Thêm thuốc thành công")
-        return redirect("/")
-    else:
-        return apology("Thuoc da ton tai tren he thong!", 400)
+            # And then we redirect user to the homepage after flashing a message
+            flash("Thêm thuốc thành công")
+            return redirect("/")
+        else:
+            return apology("Thuoc da ton tai tren he thong!", 400)
 
 
 @app.route("/correct_record", methods=["POST"])
@@ -507,19 +538,23 @@ def correct_record():
     """Allow user to change med info or transaction info"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [Medicine.user_type == user_type]
 
-    # When user wants to change existing med info:
-    # Will have to query Medicine database to get all meds name
-    if request.form.get("btnradio") == "med_info":
-        # Query for all records of medicine from database
-        existing_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
-        return render_template("change_med.html", existing_meds=existing_meds, current_user=current_user)
-    
-    # Else if the user wants to change transaction records
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
     else:
-        return render_template("fix_transaction.html", current_user=current_user)
+        # When user wants to change existing med info:
+        # Will have to query Medicine database to get all meds name
+        if request.form.get("btnradio") == "med_info":
+            # Query for all records of medicine from database
+            existing_meds = Medicine.query.order_by(Medicine.med_name).filter(*queries).all()
+            return render_template("change_med.html", existing_meds=existing_meds, current_user=current_user)
+    
+        # Else if the user wants to change transaction records
+        else:
+            return render_template("fix_transaction.html", current_user=current_user)
 
 
 @app.route("/change_med", methods=["POST"])
@@ -528,7 +563,7 @@ def change_med():
     """Allow user to change existing information about a medicine"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     # Determine the medicine in need of change
     med_name = (request.form.get("medname").split(" - "))[0]
     # Query existing data about that medicine:
@@ -554,7 +589,8 @@ def change_med():
     }
 
     # Adding the data to the ChangedInfo database:
-    current_time = datetime.now()
+    utc_now = datetime.now(pytz.utc)
+    current_time = utc_now.astimezone(pytz.timezone('Asia/Bangkok'))
     current_IP = request.environ['REMOTE_ADDR']
     change_notes = request.form.get("med_notes")
 
@@ -620,7 +656,7 @@ def change_med_confirm():
 def delete_initial():
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
 
     # First we will get the transaction ID that user wants to delete
     trans_id = int(request.form.get("trans_id"))
@@ -638,7 +674,7 @@ def delete_initial():
 def delete_final():
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     # Get the ID of the transaction that user wants to delete
     trans_id = request.form.get("trans_id")
 
@@ -647,7 +683,8 @@ def delete_final():
         # Log the deletion in the changes database
         changing_trans = BuySellHistory.query.filter_by(action_id=trans_id).first()
 
-        current_time = datetime.now()
+        utc_now = datetime.now(pytz.utc)
+        current_time = utc_now.astimezone(pytz.timezone('Asia/Bangkok'))
         current_IP = request.environ['REMOTE_ADDR']
         changed_from = {
             "med_name": changing_trans.medicine,
@@ -714,32 +751,37 @@ def changes():
     """Allow user to see existing records of changes made in med info or transaction info"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [ChangedInfo.user_type == user_type]
-    # Query the ChangedInfo table to get all the changes made by user
-    if request.method == "GET":
-        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
+
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
     else:
-        # Getting input from the user
-        filter_user = request.form.get("filter_user")
-        filter_day = request.form.get("filter_day")
-        filter_month = request.form.get("filter_month")
-        filter_year = request.form.get("filter_year")
-        filter_med = request.form.get("filter_med")
-        filter_type = request.form.get("filter_type")
+        # Query the ChangedInfo table to get all the changes made by user
+        if request.method == "GET":
+            all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
+        else:
+            # Getting input from the user
+            filter_user = request.form.get("filter_user")
+            filter_day = request.form.get("filter_day")
+            filter_month = request.form.get("filter_month")
+            filter_year = request.form.get("filter_year")
+            filter_med = request.form.get("filter_med")
+            filter_type = request.form.get("filter_type")
 
-        if filter_user: queries.append(ChangedInfo.changed_by == filter_user)
-        if filter_day: queries.append(func.to_char(ChangedInfo.changed_time, "DD") == filter_day)
-        if filter_month: queries.append(func.to_char(ChangedInfo.changed_time, "MM") == filter_month)
-        if filter_year: queries.append(func.to_char(ChangedInfo.changed_time, "YYYY") == filter_year)
-        if filter_med: queries.append(func.lower(ChangedInfo.medicine) == filter_med)
-        if filter_type: queries.append(ChangedInfo.change_type == filter_type)
-    
-        flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, loại giao dịch:{filter_type}")
-        all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
+            if filter_user: queries.append(ChangedInfo.changed_by == filter_user)
+            if filter_day: queries.append(func.to_char(ChangedInfo.changed_time, "DD") == filter_day)
+            if filter_month: queries.append(func.to_char(ChangedInfo.changed_time, "MM") == filter_month)
+            if filter_year: queries.append(func.to_char(ChangedInfo.changed_time, "YYYY") == filter_year)
+            if filter_med: queries.append(func.lower(ChangedInfo.medicine) == filter_med)
+            if filter_type: queries.append(ChangedInfo.change_type == filter_type)
+        
+            flash(f"Lọc theo người dùng: {filter_user}, ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, loại giao dịch:{filter_type}")
+            all_changes = ChangedInfo.query.order_by(ChangedInfo.changed_time.desc()).filter(*queries).all()
 
 
-    return render_template("changes_history.html", all_changes=all_changes, current_user=current_user)
+        return render_template("changes_history.html", all_changes=all_changes, current_user=current_user)
 
 @app.route("/report", methods=["GET", "POST"])
 @login_required
@@ -747,38 +789,49 @@ def report():
     """Allow user to generate report of the outgoing medicine to each sale place"""
     user_info = User.query.filter_by(user_id=session["user_id"]).first()
     current_user = user_info.username
-    user_type = user_info.user_type
+    user_type = user_info.user_type if user_info.user_type != "nhanthuoc" else None
     queries = [BuySellHistory.user_type == user_type]
 
-    if request.method == "GET":
-        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
+    if not user_type:
+        flash("Vui lòng chỉ truy cập chức năng nhận thuốc!")
+        return render_template("med_receive_redirect.html", current_user=current_user)
     else:
-        # Getting input from the user
-        filter_day = request.form.get("filter_day")
-        filter_month = request.form.get("filter_month")
-        filter_year = request.form.get("filter_year")
-        filter_med = request.form.get("filter_med").lower()
-        filter_place = request.form.get("filter_place").lower()
+        if request.method == "GET":
+            med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
+        else:
+            # Getting input from the user
+            filter_day = request.form.get("filter_day")
+            filter_month = request.form.get("filter_month")
+            filter_year = request.form.get("filter_year")
+            filter_med = request.form.get("filter_med").lower()
+            filter_place = request.form.get("filter_place").lower()
 
-        # Add to our queries if the user input something in the field
-        if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
-        if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
-        if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
-        if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
-        if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
+            # Add to our queries if the user input something in the field
+            if filter_day: queries.append(func.to_char(BuySellHistory.action_time, "DD") == filter_day)
+            if filter_month: queries.append(func.to_char(BuySellHistory.action_time, "MM") == filter_month)
+            if filter_year: queries.append(func.to_char(BuySellHistory.action_time, "YYYY") == filter_year)
+            if filter_med: queries.append(func.lower(BuySellHistory.medicine) == filter_med)
+            if filter_place: queries.append(func.lower(BuySellHistory.sale_place) == filter_place)
 
-        flash(f"Lọc theo ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}")
-        med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
+            flash(f"Lọc theo ngày: {filter_day}, tháng: {filter_month}, năm: {filter_year}, thuốc: {filter_med}, nơi xuất:{filter_place}")
+            med_report = db.session.query(BuySellHistory.medicine, func.sum(func.cast(BuySellHistory.quantity, Integer)), func.sum(func.cast(BuySellHistory.action_total, Integer))).filter(*queries).group_by(BuySellHistory.medicine)
 
-    return render_template("report.html", med_report=med_report, current_user=current_user)
+        return render_template("report.html", med_report=med_report, current_user=current_user)
 
 @app.route("/receive", methods=["GET", "POST"])
 @login_required
 def receive():
-    if request.method == "GET":
-        return render_template("receive.html")
+    user_info = User.query.filter_by(user_id=session["user_id"]).first()
+    current_user = user_info.username
+    user_type = user_info.user_type
+    
+    if user_type == "nhanthuoc":
+        if request.method == "GET":
+            all_meds = Medicine.query.order_by(Medicine.user_type).all()
+            return render_template("receive.html", user=current_user, user_type=user_type, all_meds=all_meds)
     else:
-        return render_template("med_receive.html")
+        return apology("Ban khong co quyen su dung chuc nang nay", 403)
+
 
 
 # Run the app
